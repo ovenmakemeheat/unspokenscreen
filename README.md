@@ -1,101 +1,124 @@
-# unspokenscreen
+# The Unspoken Screen
+### หน้าจอที่อยากให้ครอบครัวเห็น
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, Hono, and more.
+A web platform that gives students a safe, anonymous space to share unspoken thoughts and feelings with their families. Built as a "letter, not a dashboard" — warm, empathetic, and human-first.
 
-## Features
+---
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
-- **Turborepo** - Optimized monorepo build system
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 + React 19 + TypeScript |
+| Backend | Hono 4 on Bun |
+| Database | SQLite via Drizzle ORM (Turso-compatible) |
+| Styling | TailwindCSS 4 + shadcn/ui |
+| Monorepo | Turborepo + Bun workspaces |
+
+**Fonts:** Sarabun (Thai/Latin), Lora (quotes), Patrick Hand
+
+---
 
 ## Getting Started
 
-First, install the dependencies:
+**Prerequisites:** [Bun](https://bun.sh) 1.3.5+
 
 ```bash
 bun install
 ```
 
-## Database Setup
-
-This project uses SQLite with Drizzle ORM.
-
-1. Start the local SQLite database (optional):
-
-```bash
-bun run db:local
-```
-
-2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
-
-3. Apply the schema to your database:
+**Database setup:**
 
 ```bash
 bun run db:push
 ```
 
-Then, run the development server:
+**Run dev:**
 
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+| URL | Service |
+|---|---|
+| http://localhost:3001 | Web app |
+| http://localhost:3000 | API server |
 
-## UI Customization
+---
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+## Environment Variables
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
-
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+**`apps/server/.env`**
+```
+DATABASE_URL=file:../../local.db
+CORS_ORIGIN=http://localhost:3001
 ```
 
-Import shared components like this:
-
-```tsx
-import { Button } from "@unspokenscreen/ui/components/button";
+**`apps/web/.env`**
+```
+NEXT_PUBLIC_SERVER_URL=http://localhost:3000
 ```
 
-### Add app-specific blocks
+---
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
+## Scripts
+
+| Command | Description |
+|---|---|
+| `bun run dev` | Start web + server in dev mode |
+| `bun run dev:web` | Frontend only |
+| `bun run dev:server` | Backend only |
+| `bun run build` | Build all apps |
+| `bun run check-types` | TypeScript type checking |
+| `bun run db:push` | Push schema to database |
+| `bun run db:migrate` | Run migrations |
+| `bun run db:generate` | Generate Drizzle client |
+| `bun run db:studio` | Open Drizzle Studio |
+| `bun run db:local` | Start local SQLite database |
+
+---
 
 ## Project Structure
 
 ```
 unspokenscreen/
 ├── apps/
-│   ├── web/         # Frontend application (Next.js)
-│   └── server/      # Backend API (Hono)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   └── db/          # Database schema & queries
+│   ├── web/          # Next.js frontend
+│   └── server/       # Hono API server
+└── packages/
+    ├── db/           # Drizzle schema & migrations
+    ├── env/          # Type-safe environment validation (Zod)
+    ├── ui/           # Shared shadcn/ui components
+    └── config/       # Shared TypeScript/ESLint config
 ```
 
-## Available Scripts
+---
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `bun run db:local`: Start the local SQLite database
+## Features
+
+- **Anonymous Wall** — students post floating notes tagged by theme (ครอบครัว, ความเครียด, ความฝัน, ขอบคุณ)
+- **Interactive notes** — heart reactions, family replies, avatar personalization
+- **Dark / light mode**
+- **Bilingual (Thai + English)** — Sarabun font for Thai-Latin readability
+- **Warm design system** — parchment backgrounds, calm blue / burgundy / orange palette
+
+See [`DESIGN.md`](./DESIGN.md) for the full design system documentation.
+
+---
+
+## UI Customization
+
+Shared shadcn/ui primitives live in `packages/ui`.
+
+- Design tokens and global styles: `packages/ui/src/styles/globals.css`
+- Shared components: `packages/ui/src/components/`
+
+**Add shared components:**
+```bash
+npx shadcn@latest add accordion dialog popover -c packages/ui
+```
+
+**Import:**
+```tsx
+import { Button } from "@unspokenscreen/ui/components/button";
+```

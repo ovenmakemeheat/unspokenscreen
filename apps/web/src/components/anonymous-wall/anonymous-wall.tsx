@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  PencilLine,
+  X,
+  Check,
+  Users,
+  Send,
+  Smile,
+} from "lucide-react";
 import { FloatingNote, type NoteData } from "./floating-note";
 import { ExpandedNote } from "./expanded-note";
+import { AvatarFace, AvatarPicker } from "./avatar";
+import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
 
 const FILTERS = ["ทั้งหมด", "ครอบครัว", "ความเครียด", "ความฝัน", "ขอบคุณ"];
-const TAGS = ["ครอบครัว", "ความเครียด", "ความฝัน", "อื่นๆ"];
+const TAGS = FILTERS.slice(1);
 
 const INITIAL_NOTES: NoteData[] = [
   {
@@ -129,9 +139,13 @@ export function AnonymousWall() {
   const [expanded, setExpanded] = useState<NoteData | null>(null);
   const [activeFilter, setActiveFilter] = useState("ทั้งหมด");
   const [inputText, setInputText] = useState("");
-  const [selectedTag, setSelectedTag] = useState("ครอบครัว");
+  const [selectedTag, setSelectedTag] = useState(TAGS[0]);
   const [submitted, setSubmitted] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
+
+  // Avatar state
+  const [avatar, setAvatar] = useState<AvatarPreset | null>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   // Canvas pan state
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -189,17 +203,17 @@ export function AnonymousWall() {
     setOffset({ x: lastOffset.current.x + dx, y: lastOffset.current.y + dy });
   }, []);
 
-  const handleNoteExpand = useCallback(
-    (note: NoteData) => {
-      if (didMove.current) return;
-      setExpanded(note);
-    },
-    []
-  );
+  const handleNoteExpand = useCallback((note: NoteData) => {
+    if (didMove.current) return;
+    setExpanded(note);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setExpanded(null);
+      if (e.key === "Escape") {
+        setExpanded(null);
+        setShowAvatarPicker(false);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -226,6 +240,7 @@ export function AnonymousWall() {
       floatClass: FLOAT_CLASSES[notes.length % 3],
       width: 145 + Math.floor(Math.random() * 25),
       delay: `${(notes.length % 4) * 0.4}s`,
+      avatar: avatar ?? undefined,
     };
     setNotes((prev) => [...prev, newNote]);
     setInputText("");
@@ -261,9 +276,7 @@ export function AnonymousWall() {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span
-            style={{ fontSize: 16, fontWeight: 700, color: "#f9f4eb" }}
-          >
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#f9f4eb" }}>
             โน้ตจากใจ
           </span>
           <span
@@ -290,29 +303,17 @@ export function AnonymousWall() {
         />
 
         {/* Filter chips */}
-        <div
-          style={{
-            display: "flex",
-            gap: 6,
-            overflowX: "auto",
-            flexShrink: 1,
-          }}
-        >
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", flexShrink: 1 }}>
           {FILTERS.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
               style={{
                 background:
-                  activeFilter === f
-                    ? "var(--us-orange)"
-                    : "rgba(255,255,255,0.08)",
-                color:
-                  activeFilter === f ? "#fff" : "rgba(249,244,235,0.6)",
+                  activeFilter === f ? "var(--us-orange)" : "rgba(255,255,255,0.08)",
+                color: activeFilter === f ? "#fff" : "rgba(249,244,235,0.6)",
                 border:
-                  activeFilter === f
-                    ? "none"
-                    : "1px solid rgba(255,255,255,0.12)",
+                  activeFilter === f ? "none" : "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 14,
                 padding: "4px 12px",
                 fontSize: 12,
@@ -344,6 +345,34 @@ export function AnonymousWall() {
           <span style={{ fontSize: 10, opacity: 0.65 }}>ข้อความ</span>
         </div>
 
+        {/* Avatar button */}
+        <button
+          onClick={() => setShowAvatarPicker(true)}
+          title="เลือกอวตาร"
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            border: avatar
+              ? "2px solid var(--us-orange)"
+              : "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "50%",
+            width: 36,
+            height: 36,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            padding: 0,
+            overflow: "hidden",
+          }}
+        >
+          {avatar ? (
+            <AvatarFace preset={avatar} size={36} />
+          ) : (
+            <Smile size={16} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
+          )}
+        </button>
+
         {/* Write button */}
         <button
           onClick={() => setShowSubmit((s) => !s)}
@@ -356,7 +385,7 @@ export function AnonymousWall() {
             color: "#fff",
             border: "none",
             borderRadius: 20,
-            padding: "7px 16px",
+            padding: "7px 14px",
             fontSize: 13,
             fontWeight: 700,
             cursor: "pointer",
@@ -364,13 +393,22 @@ export function AnonymousWall() {
             fontFamily: "'Sarabun', sans-serif",
             whiteSpace: "nowrap",
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {submitted ? "ส่งแล้ว ✓" : showSubmit ? "ปิด ✕" : "✏️ เขียนโน้ต"}
+          {submitted ? (
+            <><Check size={14} strokeWidth={2.5} /> ส่งแล้ว</>
+          ) : showSubmit ? (
+            <><X size={14} strokeWidth={2.5} /> ปิด</>
+          ) : (
+            <><PencilLine size={14} strokeWidth={2} /> เขียนโน้ต</>
+          )}
         </button>
       </div>
 
-      {/* ── Submit panel ──────────────────────────────────── */}
+      {/* ── Submit panel ──────────────────────────────────────── */}
       {showSubmit && (
         <div
           style={{
@@ -384,6 +422,35 @@ export function AnonymousWall() {
             zIndex: 29,
           }}
         >
+          {/* Avatar preview in submit panel */}
+          <button
+            onClick={() => setShowAvatarPicker(true)}
+            title="เลือกอวตาร"
+            style={{
+              background: "var(--us-surface)",
+              border: avatar
+                ? "2px solid var(--us-orange)"
+                : "2px dashed var(--us-muted)",
+              borderRadius: "50%",
+              width: 44,
+              height: 44,
+              flexShrink: 0,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              overflow: "hidden",
+              marginTop: 2,
+            }}
+          >
+            {avatar ? (
+              <AvatarFace preset={avatar} size={44} />
+            ) : (
+              <Smile size={18} color="var(--us-muted)" strokeWidth={1.5} />
+            )}
+          </button>
+
           <div style={{ flex: 1 }}>
             <textarea
               autoFocus
@@ -410,9 +477,7 @@ export function AnonymousWall() {
                 color: "var(--us-text)",
               }}
             />
-            <div
-              style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}
-            >
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
               {TAGS.map((t) => (
                 <button
                   key={t}
@@ -422,9 +487,7 @@ export function AnonymousWall() {
                       selectedTag === t ? "var(--us-blue)" : "var(--us-surface)",
                     color: selectedTag === t ? "#fff" : "var(--us-muted)",
                     border:
-                      selectedTag === t
-                        ? "none"
-                        : "1px solid var(--us-muted)",
+                      selectedTag === t ? "none" : "1px solid var(--us-muted)",
                     borderRadius: 12,
                     padding: "3px 10px",
                     fontFamily: "'Sarabun', sans-serif",
@@ -438,6 +501,7 @@ export function AnonymousWall() {
               ))}
             </div>
           </div>
+
           <button
             onClick={handleSubmit}
             style={{
@@ -445,21 +509,25 @@ export function AnonymousWall() {
               color: "#fff",
               border: "none",
               borderRadius: 4,
-              padding: "10px 20px",
+              padding: "10px 18px",
               fontFamily: "'Sarabun', sans-serif",
               fontSize: 13,
               fontWeight: 700,
               cursor: "pointer",
               whiteSpace: "nowrap",
               marginTop: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
             }}
           >
-            ปล่อยโน้ต ↑
+            ปล่อยโน้ต
+            <Send size={13} strokeWidth={2} />
           </button>
         </div>
       )}
 
-      {/* ── Infinite canvas ───────────────────────────────── */}
+      {/* ── Infinite canvas ───────────────────────────────────── */}
       <div
         ref={canvasRef}
         onMouseDown={onMouseDown}
@@ -479,7 +547,7 @@ export function AnonymousWall() {
           WebkitUserSelect: "none",
         }}
       >
-        {/* Dot grid — pattern offset tracks pan */}
+        {/* Dot grid */}
         <svg
           style={{
             position: "absolute",
@@ -542,7 +610,6 @@ export function AnonymousWall() {
             ))}
           </svg>
 
-          {/* Notes */}
           {visible.map((n) => (
             <FloatingNote
               key={n.id}
@@ -552,12 +619,15 @@ export function AnonymousWall() {
           ))}
         </div>
 
-        {/* Expanded modal — lives in canvas viewport space */}
         {expanded && (
-          <ExpandedNote note={expanded} onClose={() => setExpanded(null)} />
+          <ExpandedNote
+            note={expanded}
+            onClose={() => setExpanded(null)}
+            replyAvatar={avatar}
+          />
         )}
 
-        {/* Bottom-center hint */}
+        {/* Hint */}
         <div
           style={{
             position: "absolute",
@@ -575,7 +645,7 @@ export function AnonymousWall() {
           ลากเพื่อสำรวจ · กดโน้ตเพื่ออ่านและตอบกลับ
         </div>
 
-        {/* Bottom-right family CTA */}
+        {/* Family CTA */}
         <div
           style={{
             position: "absolute",
@@ -585,11 +655,25 @@ export function AnonymousWall() {
             fontSize: 12,
             color: "rgba(47,89,122,0.65)",
             pointerEvents: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
           }}
         >
-          👨‍👩‍👧 กดที่โน้ตเพื่อส่งกำลังใจ
+          <Users size={13} strokeWidth={1.5} color="rgba(47,89,122,0.65)" />
+          กดที่โน้ตเพื่อส่งกำลังใจ
         </div>
       </div>
+
+      {/* ── Avatar picker modal ───────────────────────────────── */}
+      {showAvatarPicker && (
+        <AvatarPicker
+          presets={AVATAR_PRESETS}
+          selected={avatar}
+          onSelect={(p) => setAvatar(p)}
+          onClose={() => setShowAvatarPicker(false)}
+        />
+      )}
     </div>
   );
 }

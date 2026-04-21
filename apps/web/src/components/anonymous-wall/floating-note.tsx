@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { Heart, MessageCircle } from "lucide-react";
+import type { AvatarPreset } from "./avatar-store";
+import { AvatarFace } from "./avatar";
 
 export type NoteData = {
   id: number;
   text: string;
   tag: string;
   hearts: number;
-  replies: { from: string; text: string }[];
+  replies: { from: string; text: string; avatar?: AvatarPreset }[];
   x: number;
   y: number;
   rotation: number;
@@ -16,6 +19,7 @@ export type NoteData = {
   floatClass: "us-float-a" | "us-float-b" | "us-float-c";
   width: number;
   delay: string;
+  avatar?: AvatarPreset;
 };
 
 type Props = NoteData & {
@@ -35,6 +39,7 @@ export function FloatingNote({
   floatClass,
   width,
   delay,
+  avatar,
   onExpand,
 }: Props) {
   const [hearts, setHearts] = useState(initHearts);
@@ -51,10 +56,13 @@ export function FloatingNote({
     }
   };
 
-  const borderColor =
-    textColor === "#f9f4eb"
-      ? "rgba(255,255,255,0.12)"
-      : "rgba(0,0,0,0.08)";
+  const isLight = textColor === "#1a1a1a";
+  const borderColor = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)";
+  const heartColor = hearted
+    ? "#e53e3e"
+    : isLight
+    ? "rgba(0,0,0,0.35)"
+    : "rgba(255,255,255,0.45)";
 
   return (
     <div
@@ -70,8 +78,7 @@ export function FloatingNote({
         color: textColor,
         borderRadius: 4,
         padding: "14px 12px 10px",
-        boxShadow:
-          "0 4px 14px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1)",
         cursor: "pointer",
         animationDelay: delay,
         zIndex: 2,
@@ -93,18 +100,27 @@ export function FloatingNote({
         }}
       />
 
-      {/* Tag */}
+      {/* Tag + avatar row */}
       <div
         style={{
-          fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-          fontSize: 8,
-          letterSpacing: 1.5,
-          textTransform: "uppercase",
-          opacity: 0.55,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginBottom: 5,
         }}
       >
-        {tag}
+        <div
+          style={{
+            fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
+            fontSize: 8,
+            letterSpacing: 1.5,
+            textTransform: "uppercase",
+            opacity: 0.55,
+          }}
+        >
+          {tag}
+        </div>
+        {avatar && <AvatarFace preset={avatar} size={20} />}
       </div>
 
       {/* Text */}
@@ -146,14 +162,15 @@ export function FloatingNote({
         >
           <span
             className={heartAnim ? "us-heart-pop" : ""}
-            style={{
-              fontSize: 14,
-              display: "inline-block",
-              filter: hearted ? "none" : "grayscale(1)",
-              transition: "filter 0.2s",
-            }}
+            style={{ display: "inline-flex" }}
           >
-            {hearted ? "❤️" : "🤍"}
+            <Heart
+              size={13}
+              fill={hearted ? heartColor : "none"}
+              color={heartColor}
+              strokeWidth={2}
+              style={{ transition: "all 0.2s" }}
+            />
           </span>
           <span
             style={{
@@ -175,15 +192,19 @@ export function FloatingNote({
             background: "none",
             border: "1px solid currentColor",
             borderRadius: 10,
-            padding: "1px 7px",
+            padding: "2px 7px",
             fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
             fontSize: 9,
             opacity: 0.5,
             cursor: "pointer",
             color: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
           }}
         >
-          {replies.length > 0 ? `💬 ${replies.length}` : "ตอบกลับ"}
+          <MessageCircle size={9} strokeWidth={2} />
+          {replies.length > 0 ? replies.length : "ตอบกลับ"}
         </button>
       </div>
     </div>

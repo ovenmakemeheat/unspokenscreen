@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Heart, Send, X, Users } from "lucide-react";
 import type { NoteData } from "./floating-note";
+import type { AvatarPreset } from "./avatar-store";
+import { AvatarFace } from "./avatar";
 
 type Props = {
   note: NoteData;
   onClose: () => void;
+  replyAvatar?: AvatarPreset | null;
 };
 
-export function ExpandedNote({ note, onClose }: Props) {
+export function ExpandedNote({ note, onClose, replyAvatar }: Props) {
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState(note.replies);
   const [hearts, setHearts] = useState(note.hearts);
@@ -16,10 +20,16 @@ export function ExpandedNote({ note, onClose }: Props) {
 
   const submit = () => {
     if (reply.trim()) {
-      setReplies((r) => [...r, { from: "ครอบครัว", text: reply.trim() }]);
+      setReplies((r) => [
+        ...r,
+        { from: "ครอบครัว", text: reply.trim(), avatar: replyAvatar ?? undefined },
+      ]);
       setReply("");
     }
   };
+
+  const isLight = (note.textColor ?? "#1a1a1a") === "#1a1a1a";
+  const heartColor = hearted ? "#e53e3e" : isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
 
   return (
     <div
@@ -38,13 +48,15 @@ export function ExpandedNote({ note, onClose }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 300,
+          width: 310,
           background: note.color,
           color: note.textColor ?? "#1a1a1a",
           borderRadius: 8,
           padding: "20px 18px",
           boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
           position: "relative",
+          maxHeight: "80vh",
+          overflowY: "auto",
         }}
       >
         {/* Close */}
@@ -53,31 +65,40 @@ export function ExpandedNote({ note, onClose }: Props) {
           style={{
             position: "absolute",
             top: 10,
-            right: 12,
+            right: 10,
             background: "none",
             border: "none",
             cursor: "pointer",
-            fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-            fontSize: 16,
-            opacity: 0.4,
             color: "inherit",
+            opacity: 0.4,
+            display: "flex",
+            padding: 4,
           }}
         >
-          ✕
+          <X size={16} strokeWidth={2} />
         </button>
 
-        {/* Tag */}
+        {/* Tag + author avatar */}
         <div
           style={{
-            fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-            fontSize: 9,
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-            opacity: 0.4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             marginBottom: 8,
           }}
         >
-          {note.tag}
+          <div
+            style={{
+              fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
+              fontSize: 9,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              opacity: 0.4,
+            }}
+          >
+            {note.tag}
+          </div>
+          {note.avatar && <AvatarFace preset={note.avatar} size={28} />}
         </div>
 
         {/* Full text */}
@@ -113,10 +134,19 @@ export function ExpandedNote({ note, onClose }: Props) {
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontSize: 18,
+              display: "flex",
+              alignItems: "center",
+              color: "inherit",
+              padding: 0,
             }}
           >
-            {hearted ? "❤️" : "🤍"}
+            <Heart
+              size={18}
+              fill={hearted ? heartColor : "none"}
+              color={heartColor}
+              strokeWidth={2}
+              style={{ transition: "all 0.2s" }}
+            />
           </button>
           <span
             style={{
@@ -147,8 +177,12 @@ export function ExpandedNote({ note, onClose }: Props) {
                 letterSpacing: 1,
                 textTransform: "uppercase",
                 marginBottom: 4,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
               }}
             >
+              <Users size={10} strokeWidth={2} />
               ครอบครัวตอบกลับ
             </div>
             {replies.map((r, i) => (
@@ -163,13 +197,26 @@ export function ExpandedNote({ note, onClose }: Props) {
               >
                 <div
                   style={{
-                    fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-                    fontSize: 9,
-                    color: "var(--us-blue)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
                     marginBottom: 3,
                   }}
                 >
-                  👨‍👩‍👧 {r.from}
+                  {r.avatar ? (
+                    <AvatarFace preset={r.avatar} size={16} />
+                  ) : (
+                    <Users size={11} color="var(--us-blue)" strokeWidth={2} />
+                  )}
+                  <span
+                    style={{
+                      fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
+                      fontSize: 9,
+                      color: "var(--us-blue)",
+                    }}
+                  >
+                    {r.from}
+                  </span>
                 </div>
                 <div
                   style={{
@@ -225,11 +272,20 @@ export function ExpandedNote({ note, onClose }: Props) {
               fontSize: 12,
               resize: "none",
               outline: "none",
-              minHeight: 56,
+              minHeight: 52,
               color: "#1a1a1a",
             }}
           />
-          <div style={{ padding: "4px 8px 8px", textAlign: "right" }}>
+          <div
+            style={{
+              padding: "4px 8px 8px",
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {replyAvatar && <AvatarFace preset={replyAvatar} size={20} />}
             <button
               onClick={submit}
               style={{
@@ -237,13 +293,17 @@ export function ExpandedNote({ note, onClose }: Props) {
                 color: "#fff",
                 border: "none",
                 borderRadius: 14,
-                padding: "5px 14px",
+                padding: "5px 12px",
                 fontFamily: "var(--font-sarabun), 'Sarabun', sans-serif",
                 fontSize: 11,
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
               }}
             >
-              ส่ง →
+              ส่ง
+              <Send size={11} strokeWidth={2} />
             </button>
           </div>
         </div>
