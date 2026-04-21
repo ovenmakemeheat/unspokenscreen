@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-lyra",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@unspokenscreen/ui/components",
+    "utils": "@unspokenscreen/ui/lib/utils",
+    "hooks": "@unspokenscreen/ui/hooks",
+    "lib": "@unspokenscreen/ui/lib",
+    "ui": "@unspokenscreen/ui/components"
+  },
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {}
+}

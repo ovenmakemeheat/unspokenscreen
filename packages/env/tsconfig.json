@@ -1,0 +1,3 @@
+{
+  "extends": "@unspokenscreen/config/tsconfig.base.json"
+}
