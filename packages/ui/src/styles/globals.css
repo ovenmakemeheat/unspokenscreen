@@ -4,6 +4,7 @@
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -128,3 +129,40 @@
     @apply font-sans;
   }
 }
+
+/* ── Unspoken Screen design tokens ── */
+:root {
+  --us-bg: #f9f4eb;
+  --us-blue: #2f597a;
+  --us-burg: #562634;
+  --us-orange: #ff751f;
+  --us-text: #1a1a1a;
+  --us-muted: #6b6055;
+  --us-surface: #f0e9d8;
+  --us-dark: #1e3a4f;
+}
+
+/* ── Floating note animations ── */
+@keyframes us-float-a {
+  0%, 100% { transform: translateY(0px) rotate(var(--note-r, 0deg)); }
+  50%       { transform: translateY(-6px) rotate(var(--note-r, 0deg)); }
+}
+@keyframes us-float-b {
+  0%, 100% { transform: translateY(0px) rotate(var(--note-r, 0deg)); }
+  50%       { transform: translateY(-9px) rotate(var(--note-r, 0deg)); }
+}
+@keyframes us-float-c {
+  0%, 100% { transform: translateY(0px) rotate(var(--note-r, 0deg)); }
+  50%       { transform: translateY(-5px) rotate(var(--note-r, 0deg)); }
+}
+@keyframes us-heart-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.5); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1.2); }
+}
+
+.us-float-a { animation: us-float-a 4s ease-in-out infinite; }
+.us-float-b { animation: us-float-b 5.5s ease-in-out infinite; }
+.us-float-c { animation: us-float-c 3.8s ease-in-out infinite; }
+.us-heart-pop { animation: us-heart-pop 0.4s ease forwards; }
