@@ -12,10 +12,12 @@ const app = new Hono();
 const api = new OpenAPIHono();
 
 api.use(logger());
+const corsOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+
 api.use(
   "/*",
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: corsOrigins,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   }),
 );

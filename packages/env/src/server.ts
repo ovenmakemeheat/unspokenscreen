@@ -7,7 +7,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1),
     // SUPABASE_URL: z.url(),
     // SUPABASE_ANON_KEY: z.string().min(1),
-    CORS_ORIGIN: z.url(),
+    CORS_ORIGIN: z.string().min(1),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
