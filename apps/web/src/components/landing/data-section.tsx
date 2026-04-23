@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useCountUp } from "./shared";
 import { ImageIcon } from "lucide-react";
 
 // ── Types mirroring the API ───────────────────────────────────
@@ -51,57 +52,34 @@ function AnimatedBar({
   label,
   value,
   max,
-  colorClass,
+  textClass,
+  bgClass,
   delay,
   suffix = "",
 }: {
   label: string;
   value: number;
   max: number;
-  colorClass: string;
+  textClass: string;
+  bgClass: string;
   delay: number;
   suffix?: string;
 }) {
-  const [width, setWidth] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          setTimeout(() => {
-            const start = performance.now();
-            const animate = (now: number) => {
-              const p = Math.min((now - start) / 900, 1);
-              const ease = 1 - Math.pow(1 - p, 3);
-              setWidth(ease * (value / max) * 100);
-              if (p < 1) requestAnimationFrame(animate);
-            };
-            requestAnimationFrame(animate);
-          }, delay);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [value, max, delay]);
+  const scaledTarget = Math.round((value / max) * 1000);
+  const [ref, scaledWidth] = useCountUp(scaledTarget, { duration: 900, threshold: 0.3, delay });
+  const width = scaledWidth / 10;
 
   return (
     <div ref={ref} className="mb-3.5">
       <div className="flex justify-between mb-1.5 gap-2">
         <span className="text-[13px] text-us-dark leading-snug flex-1">{label}</span>
-        <span className={`text-[13px] font-bold shrink-0 ${colorClass}`}>
+        <span className={`text-[13px] font-bold shrink-0 ${textClass}`}>
           {value.toFixed(1)}{suffix}
         </span>
       </div>
       <div className="h-2 bg-us-blue/10 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-[width] duration-[50ms] ${colorClass.replace("text-", "bg-")}`}
+          className={`h-full rounded-full transition-[width] duration-50 ${bgClass}`}
           style={{ width: `${width}%` }}
         />
       </div>
@@ -156,7 +134,7 @@ function ChoiceChart({ question }: { question: ChoiceQuestion }) {
   const shown = question.choices.slice(0, 6);
 
   return (
-    <div className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+    <div className="bg-white rounded-xl px-4 py-4.5 shadow-sm">
       <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
         {question.questionTh}
       </p>
@@ -173,7 +151,7 @@ function ChoiceChart({ question }: { question: ChoiceQuestion }) {
                 </span>
                 <span className={`text-[11px] font-bold shrink-0 ${textClass}`}>{pct}%</span>
               </div>
-              <div className="h-1.5 bg-us-blue/[0.08] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-us-blue/8 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${bgClass}`} style={{ width: `${barW}%` }} />
               </div>
             </div>
@@ -188,7 +166,7 @@ function ChoiceChart({ question }: { question: ChoiceQuestion }) {
 // ── Word cloud card ───────────────────────────────────────────
 function WordCloudCard({ question }: { question: WordCloudQuestion }) {
   return (
-    <div className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+    <div className="bg-white rounded-xl px-4 py-4.5 shadow-sm">
       <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
         {question.questionTh}
       </p>
@@ -200,7 +178,7 @@ function WordCloudCard({ question }: { question: WordCloudQuestion }) {
           className="w-full rounded-md object-contain"
         />
       ) : (
-        <div className="h-[130px] flex flex-col items-center justify-center gap-2 bg-us-blue/[0.04] rounded-md border-2 border-dashed border-us-blue/[0.15]">
+        <div className="h-32.5 flex flex-col items-center justify-center gap-2 bg-us-blue/4 rounded-md border-2 border-dashed border-us-blue/15">
           <ImageIcon size={24} color="rgba(47,89,122,0.3)" strokeWidth={1.5} />
           <span className="text-[11px] text-us-muted text-center">
             Word Cloud<br />
@@ -243,14 +221,14 @@ export function DataSection() {
 
   const pressureStats = summary
     ? [
-        { label: "ครอบครัวคาดหวังเกรดสูง", value: summary.keyStats.avgGradeExpectation, colorClass: "text-us-orange" },
-        { label: "กลัวบอกความจริงกับที่บ้าน", value: summary.keyStats.avgFearOfTruth, colorClass: "text-us-burg" },
-        { label: "Self-worth ลดเมื่อผลเรียนแย่", value: summary.keyStats.avgSelfWorthImpact, colorClass: "text-us-burg" },
-        { label: "ความเครียดส่งผลต่อชีวิต", value: summary.keyStats.avgStressImpact, colorClass: "text-us-orange" },
-        { label: "รู้สึกสูญเสียความเป็นตัวเอง", value: summary.keyStats.avgLostIdentity, colorClass: "text-us-blue" },
-        { label: "ครอบครัวไม่ใช่พื้นที่ปลอดภัย", value: summary.keyStats.avgNotSafeSpace, colorClass: "text-us-blue" },
-        { label: "รู้สึกโดดเดี่ยว", value: summary.keyStats.avgLoneliness, colorClass: "text-us-burg" },
-        { label: "รักมีเงื่อนไข (เมื่อสำเร็จ)", value: summary.keyStats.avgConditionalLove, colorClass: "text-us-orange" },
+        { label: "ครอบครัวคาดหวังเกรดสูง", value: summary.keyStats.avgGradeExpectation, textClass: "text-us-orange", bgClass: "bg-us-orange" },
+        { label: "กลัวบอกความจริงกับที่บ้าน", value: summary.keyStats.avgFearOfTruth, textClass: "text-us-burg", bgClass: "bg-us-burg" },
+        { label: "Self-worth ลดเมื่อผลเรียนแย่", value: summary.keyStats.avgSelfWorthImpact, textClass: "text-us-burg", bgClass: "bg-us-burg" },
+        { label: "ความเครียดส่งผลต่อชีวิต", value: summary.keyStats.avgStressImpact, textClass: "text-us-orange", bgClass: "bg-us-orange" },
+        { label: "รู้สึกสูญเสียความเป็นตัวเอง", value: summary.keyStats.avgLostIdentity, textClass: "text-us-blue", bgClass: "bg-us-blue" },
+        { label: "ครอบครัวไม่ใช่พื้นที่ปลอดภัย", value: summary.keyStats.avgNotSafeSpace, textClass: "text-us-blue", bgClass: "bg-us-blue" },
+        { label: "รู้สึกโดดเดี่ยว", value: summary.keyStats.avgLoneliness, textClass: "text-us-burg", bgClass: "bg-us-burg" },
+        { label: "รักมีเงื่อนไข (เมื่อสำเร็จ)", value: summary.keyStats.avgConditionalLove, textClass: "text-us-orange", bgClass: "bg-us-orange" },
       ]
     : [];
 
@@ -259,7 +237,7 @@ export function DataSection() {
 
   return (
     <section id="data" className="bg-us-surface py-20 px-10">
-      <div className="max-w-[960px] mx-auto">
+      <div className="max-w-240 mx-auto">
 
         {/* Header */}
         <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
@@ -268,7 +246,7 @@ export function DataSection() {
         <h2 className="text-[clamp(24px,3.5vw,38px)] font-bold text-us-dark mb-3">
           ตัวเลขที่ซ่อนอยู่ใต้ผลการเรียน
         </h2>
-        <p className="italic text-[15px] text-us-muted mb-14 max-w-[560px] leading-[1.7]">
+        <p className="italic text-[15px] text-us-muted mb-14 max-w-140 leading-[1.7]">
           ลูกของคุณไม่ได้เหนื่อยอยู่คนเดียว — นี่คือปัญหาร่วมกันของทั้งรุ่น
         </p>
 
@@ -277,7 +255,7 @@ export function DataSection() {
         )}
 
         {error && (
-          <div className="bg-us-burg/[0.06] border border-us-burg/20 rounded-lg px-[18px] py-3.5 text-[13px] text-us-burg mb-10">
+          <div className="bg-us-burg/6 border border-us-burg/20 rounded-lg px-4.5 py-3.5 text-[13px] text-us-burg mb-10">
             ไม่สามารถโหลดข้อมูลจาก API ได้ — ตรวจสอบว่า server กำลังรันอยู่ที่ {API}
           </div>
         )}
@@ -315,7 +293,8 @@ export function DataSection() {
                 label={s.label}
                 value={s.value}
                 max={5}
-                colorClass={s.colorClass}
+                textClass={s.textClass}
+                bgClass={s.bgClass}
                 delay={i * 80}
                 suffix=" / 5"
               />
@@ -331,7 +310,7 @@ export function DataSection() {
             </p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
               {detailScales.map((q) => (
-                <div key={q.id} className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+                <div key={q.id} className="bg-white rounded-xl px-4 py-4.5 shadow-sm">
                   <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
                     {q.questionTh}
                   </p>

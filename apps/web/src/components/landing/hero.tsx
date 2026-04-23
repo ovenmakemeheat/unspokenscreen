@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
+import type { Route } from "next";
+import { NAV_LINKS } from "./shared";
 
 const QUOTES = [
   "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
@@ -14,16 +16,20 @@ const QUOTES = [
 export function Hero() {
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [visible, setVisible] = useState(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setVisible(false);
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setQuoteIdx((i) => (i + 1) % QUOTES.length);
         setVisible(true);
       }, 400);
     }, 3800);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   return (
@@ -34,15 +40,10 @@ export function Hero() {
           Unspoken Screen
         </span>
         <div className="flex gap-7">
-          {[
-            ["ปัญหา", "#problem"],
-            ["เสียงจากใจ", "#voices"],
-            ["ข้อมูล", "#data"],
-            ["กำแพงนิรนาม", "/wall"],
-          ].map(([label, href]) => (
+          {NAV_LINKS.map(([label, href]) => (
             <Link
               key={label}
-              href={href as string}
+              href={href}
               className="text-us-cream/80 text-[13px] no-underline hover:text-us-cream transition-colors duration-150"
             >
               {label}
@@ -82,7 +83,7 @@ export function Hero() {
             สำรวจเว็บไซต์
           </Link>
           <Link
-            href={"/wall" as string}
+            href={"/wall" as Route}
             className="bg-transparent text-us-cream/85 border-2 border-us-cream/40 rounded-full px-7 py-3 text-[15px] no-underline hover:border-us-cream/70 hover:text-us-cream transition-all duration-200"
           >
             กำแพงนิรนาม →

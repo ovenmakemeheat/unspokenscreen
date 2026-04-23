@@ -1,6 +1,5 @@
-"use client";
-
 import Link from "next/link";
+import type { Route } from "next";
 import { MessageCircleHeart, BookOpen, TrendingUp } from "lucide-react";
 
 const SOLUTIONS = [
@@ -33,7 +32,7 @@ const SOLUTIONS = [
 export function SolutionsSection() {
   return (
     <section id="solutions" className="bg-us-dark py-20 px-10">
-      <div className="max-w-[960px] mx-auto">
+      <div className="max-w-240 mx-auto">
         <p className="text-[11px] tracking-[3px] uppercase text-us-cream/35 mb-3 font-semibold">
           แนวทางการแก้ไขปัญหา
         </p>
@@ -73,7 +72,7 @@ export function SolutionsSection() {
             </p>
           </div>
           <Link
-            href="/wall"
+            href={"/wall" as Route}
             className="bg-us-orange text-white rounded-full px-7 py-3 text-[14px] font-bold no-underline whitespace-nowrap hover:bg-orange-500 transition-colors duration-200"
           >
             ไปที่กำแพงนิรนาม →
