@@ -8,16 +8,8 @@ export const env = createEnv({
     SUPABASE_URL: z.url(),
     SUPABASE_ANON_KEY: z.string().min(1),
     CORS_ORIGIN: z.url(),
+    NODE_ENV: z.enum(["development", "production", "test"]),
   },
-  shared: {
-    NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  },
-  runtimeEnv: {
-    DATABASE_URL: Bun.env.DATABASE_URL,
-    SUPABASE_URL: Bun.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: Bun.env.SUPABASE_ANON_KEY,
-    CORS_ORIGIN: Bun.env.CORS_ORIGIN,
-    NODE_ENV: Bun.env.NODE_ENV,
-  },
+  runtimeEnv: process.env,
   emptyStringAsUndefined: true,
 });
