@@ -12,6 +12,6 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
   },
-  runtimeEnv: Bun.env,
+  runtimeEnv: process.env,
   emptyStringAsUndefined: true,
 });
