@@ -3,7 +3,10 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { handle } from "hono/vercel";
 import { surveyRouter } from "./routes/survey.js";
+
+export const config = { runtime: "edge" };
 
 const app = new OpenAPIHono();
 
@@ -36,4 +39,4 @@ app.doc("/api/openapi.json", {
 // ── Swagger UI ────────────────────────────────────────────────
 app.get("/docs", swaggerUI({ url: "/api/openapi.json" }));
 
-export default app;
+export default handle(app);
