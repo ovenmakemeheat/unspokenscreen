@@ -4,5 +4,9 @@
       "Bash(bun add:*)",
       "mcp__ide__getDiagnostics"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }
