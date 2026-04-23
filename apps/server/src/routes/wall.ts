@@ -1,9 +1,28 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { db, wallNotes, wallReplies } from "@unspokenscreen/db";
+import { db, wallNotes, wallReplies, wallUsers } from "@unspokenscreen/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const router = new OpenAPIHono();
+
+// ── Helper: resolve user from token header ─────────────────────
+async function resolveUser(token: string | undefined) {
+  if (!token) return null;
+  const rows = await db
+    .select()
+    .from(wallUsers)
+    .where(eq(wallUsers.token, token))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+// ── POST /api/wall/session ─────────────────────────────────────
+// Call once on first visit; returns a persistent token for this user.
+router.post("/session", async (c) => {
+  const rows = await db.insert(wallUsers).values({}).returning();
+  const user = rows[0]!;
+  return c.json({ token: user.token, userId: user.id }, 201);
+});
 
 // ── GET /api/wall/notes ────────────────────────────────────────
 router.get("/notes", async (c) => {
@@ -35,6 +54,7 @@ router.get("/notes", async (c) => {
     rotation: n.rotation,
     delay: n.delay,
     avatarId: n.avatarId,
+    userId: n.userId,
     replies: (replyMap.get(n.id) ?? []).map((r) => ({
       id: r.id,
       from: r.fromName,
@@ -62,6 +82,10 @@ const CreateNoteSchema = z.object({
 });
 
 router.post("/notes", async (c) => {
+  const token = c.req.header("x-user-token");
+  const user = await resolveUser(token);
+  if (!user) return c.json({ error: "Invalid or missing session token" }, 401);
+
   const body = CreateNoteSchema.parse(await c.req.json());
 
   const rows = await db
@@ -78,6 +102,7 @@ router.post("/notes", async (c) => {
       rotation: body.rotation,
       delay: body.delay,
       avatarId: body.avatarId ?? null,
+      userId: user.id,
     })
     .returning();
 
@@ -97,10 +122,85 @@ router.post("/notes", async (c) => {
       rotation: note.rotation,
       delay: note.delay,
       avatarId: note.avatarId,
+      userId: note.userId,
       replies: [],
     },
     201,
   );
+});
+
+// ── PUT /api/wall/notes/:id ────────────────────────────────────
+const UpdateNoteSchema = z.object({
+  text: z.string().min(1).max(300).optional(),
+  tag: z.string().min(1).optional(),
+  color: z.string().optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+});
+
+router.put("/notes/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) return c.json({ error: "Invalid id" }, 400);
+
+  const token = c.req.header("x-user-token");
+  const user = await resolveUser(token);
+  if (!user) return c.json({ error: "Invalid or missing session token" }, 401);
+
+  const existing = await db
+    .select()
+    .from(wallNotes)
+    .where(eq(wallNotes.id, id))
+    .limit(1);
+
+  if (!existing.length) return c.json({ error: "Not found" }, 404);
+  if (existing[0]!.userId !== user.id) return c.json({ error: "Forbidden" }, 403);
+
+  const body = UpdateNoteSchema.parse(await c.req.json());
+
+  const updates: Partial<typeof wallNotes.$inferInsert> = {};
+  if (body.text !== undefined) updates.text = body.text;
+  if (body.tag !== undefined) updates.tag = body.tag;
+  if (body.color !== undefined) updates.color = body.color;
+  if (body.x !== undefined) updates.posX = body.x;
+  if (body.y !== undefined) updates.posY = body.y;
+
+  const [updated] = await db
+    .update(wallNotes)
+    .set(updates)
+    .where(eq(wallNotes.id, id))
+    .returning();
+
+  return c.json({
+    id: updated!.id,
+    text: updated!.text,
+    tag: updated!.tag,
+    color: updated!.color,
+    x: updated!.posX,
+    y: updated!.posY,
+    userId: updated!.userId,
+  });
+});
+
+// ── DELETE /api/wall/notes/:id ─────────────────────────────────
+router.delete("/notes/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) return c.json({ error: "Invalid id" }, 400);
+
+  const token = c.req.header("x-user-token");
+  const user = await resolveUser(token);
+  if (!user) return c.json({ error: "Invalid or missing session token" }, 401);
+
+  const existing = await db
+    .select({ userId: wallNotes.userId })
+    .from(wallNotes)
+    .where(eq(wallNotes.id, id))
+    .limit(1);
+
+  if (!existing.length) return c.json({ error: "Not found" }, 404);
+  if (existing[0]!.userId !== user.id) return c.json({ error: "Forbidden" }, 403);
+
+  await db.delete(wallNotes).where(eq(wallNotes.id, id));
+  return c.json({ deleted: true });
 });
 
 // ── POST /api/wall/notes/:id/heart ─────────────────────────────

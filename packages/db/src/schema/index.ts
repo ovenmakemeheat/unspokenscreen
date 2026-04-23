@@ -1,4 +1,4 @@
-import { pgTable, bigint, smallint, text, timestamp, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, bigint, smallint, text, timestamp, integer, real, uuid } from "drizzle-orm/pg-core";
 
 export const surveyResponses = pgTable("survey_responses", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
@@ -52,6 +52,13 @@ export const choiceAnswers = pgTable("choice_answers", {
   choice: text("choice").notNull(),
 });
 
+export const wallUsers = pgTable("wall_users", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  token: uuid("token").notNull().unique().defaultRandom(),
+  avatarId: text("avatar_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const wallNotes = pgTable("wall_notes", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
   text: text("text").notNull(),
@@ -66,6 +73,7 @@ export const wallNotes = pgTable("wall_notes", {
   rotation: real("rotation").notNull().default(0),
   delay: text("delay").notNull().default("0s"),
   avatarId: text("avatar_id"),
+  userId: bigint("user_id", { mode: "number" }).references(() => wallUsers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

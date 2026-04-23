@@ -44,11 +44,14 @@ export function AnonymousWall() {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<NoteData | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState("ทั้งหมด");
   const [inputText, setInputText] = useState("");
   const [selectedTag, setSelectedTag] = useState(TAGS[0]);
   const [submitted, setSubmitted] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [newNoteId, setNewNoteId] = useState<number | null>(null);
 
   // Avatar state
   const [avatar, setAvatar] = useState<AvatarPreset | null>(null);
@@ -56,11 +59,58 @@ export function AnonymousWall() {
 
   // Canvas pan state
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const didMove = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const lastOffset = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+  const panRafRef = useRef<number | null>(null);
+
+  // Keep offsetRef in sync so panTo can read current value
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
+
+  const panTo = useCallback((targetX: number, targetY: number) => {
+    if (panRafRef.current !== null) cancelAnimationFrame(panRafRef.current);
+    const DURATION = 900;
+    const start = performance.now();
+    const fromX = offsetRef.current.x;
+    const fromY = offsetRef.current.y;
+
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+    const step = (now: number) => {
+      const t = Math.min((now - start) / DURATION, 1);
+      const e = ease(t);
+      const x = fromX + (targetX - fromX) * e;
+      const y = fromY + (targetY - fromY) * e;
+      offsetRef.current = { x, y };
+      setOffset({ x, y });
+      if (t < 1) panRafRef.current = requestAnimationFrame(step);
+      else panRafRef.current = null;
+    };
+    panRafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  // ── Session init ───────────────────────────────────────────
+  useEffect(() => {
+    const stored = localStorage.getItem("us_wall_token");
+    const storedId = localStorage.getItem("us_wall_user_id");
+    if (stored && storedId) {
+      setUserToken(stored);
+      setUserId(Number(storedId));
+      return;
+    }
+    fetch(`${API}/api/wall/session`, { method: "POST" })
+      .then((r) => r.json())
+      .then((data: { token: string; userId: number }) => {
+        localStorage.setItem("us_wall_token", data.token);
+        localStorage.setItem("us_wall_user_id", String(data.userId));
+        setUserToken(data.token);
+        setUserId(data.userId);
+      })
+      .catch(console.error);
+  }, []);
 
   // ── Fetch notes from API ───────────────────────────────────
   useEffect(() => {
@@ -135,14 +185,83 @@ export function AnonymousWall() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // ── Find a placement in an empty area ─────────────────────
+  const findPosition = useCallback(
+    (noteWidth: number, noteHeight: number): { x: number; y: number } => {
+      const cw = canvasRef.current?.clientWidth ?? 800;
+      const ch = canvasRef.current?.clientHeight ?? 500;
+      const cx = -offset.x + cw / 2;
+      const cy = -offset.y + ch / 2;
+
+      const NOTE_H = 120;
+      const JITTER = 18; // small random nudge so grid rows don't look mechanical
+      const CELL_W = noteWidth + 20;
+      const CELL_H = NOTE_H + 20;
+
+      // Grid radiates outward in rings so closer cells are checked first
+      const RINGS = 6;
+      const candidates: { x: number; y: number; dist: number }[] = [];
+      for (let ring = 0; ring <= RINGS; ring++) {
+        for (let col = -ring; col <= ring; col++) {
+          for (let row = -ring; row <= ring; row++) {
+            if (Math.abs(col) !== ring && Math.abs(row) !== ring) continue; // only perimeter of ring
+            const bx = cx + col * CELL_W - noteWidth / 2;
+            const by = cy + row * CELL_H - NOTE_H / 2;
+            const dist = Math.hypot(col, row);
+            candidates.push({ x: bx, y: by, dist });
+          }
+        }
+      }
+
+      const isClear = (x: number, y: number) => {
+        for (const n of notes) {
+          const nw = n.width ?? 150;
+          const ox = Math.max(0, Math.min(x + noteWidth, n.x + nw) - Math.max(x, n.x));
+          const oy = Math.max(0, Math.min(y + noteHeight, n.y + NOTE_H) - Math.max(y, n.y));
+          if (ox * oy > 0) return false; // any overlap = not clear
+        }
+        return true;
+      };
+
+      // Sort by distance from viewport center, try each cell
+      candidates.sort((a, b) => a.dist - b.dist);
+      for (const { x, y } of candidates) {
+        if (isClear(x, y)) {
+          return {
+            x: x + (Math.random() - 0.5) * JITTER,
+            y: y + (Math.random() - 0.5) * JITTER,
+          };
+        }
+      }
+
+      // All grid cells occupied — place in the closest cell with the least overlap
+      let best = candidates[0]!;
+      let bestOverlap = Infinity;
+      for (const c of candidates) {
+        let totalOverlap = 0;
+        for (const n of notes) {
+          const nw = n.width ?? 150;
+          const ox = Math.max(0, Math.min(c.x + noteWidth, n.x + nw) - Math.max(c.x, n.x));
+          const oy = Math.max(0, Math.min(c.y + noteHeight, n.y + NOTE_H) - Math.max(c.y, n.y));
+          totalOverlap += ox * oy;
+        }
+        if (totalOverlap < bestOverlap) { bestOverlap = totalOverlap; best = c; }
+      }
+      return {
+        x: best.x + (Math.random() - 0.5) * JITTER,
+        y: best.y + (Math.random() - 0.5) * JITTER,
+      };
+    },
+    [notes, offset]
+  );
+
   // ── Submit new note ────────────────────────────────────────
   const handleSubmit = async () => {
     if (!inputText.trim()) return;
     const colorPick = NOTE_COLORS[notes.length % NOTE_COLORS.length];
-    const cw = canvasRef.current?.clientWidth ?? 800;
-    const ch = canvasRef.current?.clientHeight ?? 500;
-    const vx = -offset.x + cw / 2 - 80 + (Math.random() - 0.5) * 200;
-    const vy = -offset.y + ch / 2 - 60 + (Math.random() - 0.5) * 120;
+    const noteWidth = 145 + Math.floor(Math.random() * 25);
+    const noteHeight = 120;
+    const { x: vx, y: vy } = findPosition(noteWidth, noteHeight);
 
     const payload = {
       text: inputText.trim(),
@@ -150,7 +269,7 @@ export function AnonymousWall() {
       color: colorPick.color,
       textColor: colorPick.textColor,
       floatClass: FLOAT_CLASSES[notes.length % 3],
-      width: 145 + Math.floor(Math.random() * 25),
+      width: noteWidth,
       x: vx,
       y: vy,
       rotation: (Math.random() - 0.5) * 5,
@@ -161,19 +280,64 @@ export function AnonymousWall() {
     try {
       const res = await fetch(`${API}/api/wall/notes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(userToken ? { "x-user-token": userToken } : {}),
+        },
         body: JSON.stringify(payload),
       });
       const created: NoteData = await res.json();
       setNotes((prev) => [...prev, created]);
+      setNewNoteId(created.id);
+      setTimeout(() => setNewNoteId(null), 600);
       setInputText("");
       setSubmitted(true);
       setShowSubmit(false);
       setTimeout(() => setSubmitted(false), 2000);
+
+      // Pan canvas so the new note is centered in the viewport
+      const cw = canvasRef.current?.clientWidth ?? 800;
+      const ch = canvasRef.current?.clientHeight ?? 500;
+      panTo(-(created.x + (created.width ?? 150) / 2) + cw / 2, -(created.y + 60) + ch / 2);
     } catch (err) {
       console.error("Failed to create note:", err);
     }
   };
+
+  // ── Delete a note ──────────────────────────────────────────
+  const handleDelete = useCallback(async (noteId: number) => {
+    if (!userToken) return;
+    try {
+      await fetch(`${API}/api/wall/notes/${noteId}`, {
+        method: "DELETE",
+        headers: { "x-user-token": userToken },
+      });
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      console.error("Failed to delete note:", err);
+    }
+  }, [userToken]);
+
+  // ── Edit a note ────────────────────────────────────────────
+  const handleEdit = useCallback(async (noteId: number, text: string, tag: string) => {
+    if (!userToken) return;
+    try {
+      const res = await fetch(`${API}/api/wall/notes/${noteId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-token": userToken,
+        },
+        body: JSON.stringify({ text, tag }),
+      });
+      const updated = await res.json();
+      setNotes((prev) =>
+        prev.map((n) => (n.id === noteId ? { ...n, text: updated.text, tag: updated.tag } : n))
+      );
+    } catch (err) {
+      console.error("Failed to edit note:", err);
+    }
+  }, [userToken]);
 
   // ── Heart a note ───────────────────────────────────────────
   const handleHeart = useCallback(async (noteId: number) => {
@@ -589,13 +753,18 @@ export function AnonymousWall() {
             ))}
           </svg>
 
-          {visible.map((n) => (
+          {visible.map((n, i) => (
             <FloatingNote
               key={n.id}
               {...n}
+              zIndex={visible.length - i}
               resolvedAvatar={resolveAvatar(n.avatarId)}
+              isOwner={userId !== null && n.userId === userId}
+              isNew={n.id === newNoteId}
               onExpand={() => handleNoteExpand(n)}
               onHeart={() => handleHeart(n.id)}
+              onDelete={() => handleDelete(n.id)}
+              onEdit={(text, tag) => handleEdit(n.id, text, tag)}
             />
           ))}
         </div>
