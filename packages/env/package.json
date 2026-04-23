@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@types/node": "catalog:",
     "@unspokenscreen/config": "workspace:*",
     "typescript": "catalog:"
   }
