@@ -85,89 +85,109 @@ Max content width: `1200px`, centered with `auto` horizontal margin.
 
 ---
 
-## 5. Component Design
+## 5. Styling Rules — Tailwind First
 
-### 5.1 Navigation Bar
+> **Mandate:** All components MUST be styled with Tailwind CSS utility classes as the primary method. Inline `style={{}}` props are only permitted for values that Tailwind cannot express (e.g., dynamic JS-computed values like canvas `transform: translate(${x}px, ${y}px)`, SVG attributes, or truly one-off computed colors). Never use inline styles for static design values.
 
-- Background: `#2f597a` (Primary)
-- Logo / site name: white, Sarabun 600
-- Nav links: white, 14–15px, letter-spacing 0.5px
-- Active/hover: underline with `#ff751f` (Accent)
-- Mobile: hamburger menu with slide-in drawer on `#1e3a4f`
+### When to use Tailwind (always prefer this)
+- Colors, backgrounds, borders → `bg-us-blue`, `text-us-orange`, `border-us-burg`
+- Spacing, padding, margin → `px-5`, `py-6`, `gap-4`, `mb-10`
+- Typography → `text-[15px]`, `font-bold`, `tracking-[3px]`, `leading-snug`
+- Flex/grid layout → `flex`, `grid`, `items-center`, `justify-between`
+- Responsive variants → `sm:px-10`, `md:grid-cols-2`, `lg:grid-cols-3`
+- Borders, radius, shadows → `rounded-xl`, `shadow-sm`, `border-l-4`
+- Hover/focus/transition → `hover:bg-orange-500`, `transition-colors`, `duration-200`
+- Opacity → `opacity-35`, `text-us-cream/60`
 
-### 5.2 Hero Section
+### When inline `style={{}}` is allowed (exceptions only)
+- **Dynamic transforms** driven by JS state: `transform: translate(${offset.x}px, ${offset.y}px)`
+- **Animated widths** driven by JS-computed percentages: `style={{ width: \`${width}%\` }}`
+- **SVG-specific attributes** that have no Tailwind equivalent
+- **Canvas/animation frame** values written by `requestAnimationFrame`
 
-- Background: `#1e3a4f` (Surface Dark) with a subtle grain/noise texture overlay for depth
-- Headline: white, Display size, Sarabun 700
-- Subheadline: `#f9f4eb` at 80% opacity, Body Large
-- CTA Button: `#ff751f` background, white text, bold — "สำรวจเว็บไซต์" / "Explore"
-- Secondary CTA: outlined, white border, white text
-- Optional: faint abstract wave or gentle particle animation at bottom of hero
-
-### 5.3 Statistics / Data Cards
-
-Used in the "Data & Evidence" section to visualize survey results.
-
-- Card background: `#f0e9d8` (Surface)
-- Border: none; subtle `box-shadow: 0 2px 12px rgba(47,89,122,0.08)`
-- Stat number: `#ff751f`, 48px, Sarabun 700
-- Stat label: `#2f597a`, 14px, uppercase, letter-spacing 1px
-- Context text: `#1a1a1a`, 15px
-
-### 5.4 Quote / Voice Blocks (The Anonymous Wall)
-
-Student voices are emotionally central — they deserve prominent treatment.
-
-- Background: `#562634` (Secondary)
-- Quote text: `#f9f4eb`, Lora italic, 22px
-- Opening quotation mark: `#ff751f`, 80px, decorative
-- Attribution: `#f0e9d8`, 13px, muted — e.g., "นักศึกษาชั้นปีที่ 3, ไม่ระบุตัวตน"
-- Alternating variant: `#f0e9d8` background with `#562634` text for contrast rhythm
-
-### 5.5 Interactive Question Cards (The Unasked Questions)
-
-- Card background: white-cream `#f0e9d8`
-- Question text: `#2f597a`, H3, Sarabun 600
-- Hover state: card lifts (`transform: translateY(-4px)`), border-left `4px solid #ff751f`
-- Expanded/active: reveals response data visualization within card
-- Chart accent colors: Primary `#2f597a`, Secondary `#562634`, Highlight `#ff751f`
-
-### 5.6 Buttons
-
-| Variant | Background | Text | Border | Hover |
-|---|---|---|---|---|
-| Primary | `#ff751f` | white | — | darken 10% (`#e0641a`) |
-| Secondary | `#2f597a` | white | — | darken 10% (`#244868`) |
-| Outlined | transparent | `#2f597a` | `#2f597a` | bg fill `#2f597a`, text white |
-| Ghost | transparent | `#ff751f` | — | underline |
-
-Border radius: `8px` on standard buttons, `24px` on pill CTAs.
-
-### 5.7 Anonymous Wall Input
-
-- Container background: `#f0e9d8`
-- Textarea: white bg, `1px solid #c8bfb0`, border-radius `8px`
-- Focus ring: `2px solid #2f597a`
-- Submit button: Primary variant (orange)
-- Character counter: muted gray `#6b6055`
-- Posted messages display as soft cards with left border `#562634`
-
-### 5.8 Section Dividers
-
-Use full-width wave SVG dividers between sections, alternating background colors:
-- `#f9f4eb` → `#1e3a4f` → `#f9f4eb` → `#f0e9d8`
-- Wave fill matches the destination section color
-
-### 5.9 Footer
-
-- Background: `#1e3a4f` (Surface Dark)
-- Text: `#f9f4eb`, 14px
-- Links: `#ff751f` on hover
-- Tagline: `"เพราะหน้าจอนี้... คือพื้นที่ที่ความในใจได้ส่งถึงกัน"` — centered, Lora italic, `#f0e9d8`
+### What is forbidden
+- `style={{ fontSize: 14 }}` — use `text-[14px]`
+- `style={{ color: '#ff751f' }}` — use `text-us-orange` or `text-[#ff751f]`
+- `style={{ background: 'var(--us-dark)' }}` — use `bg-us-dark`
+- `style={{ fontFamily: "'Sarabun', sans-serif" }}` — use `font-sans` or the project font class
+- `style={{ borderRadius: 8 }}` — use `rounded-lg`
+- `style={{ display: 'flex', alignItems: 'center' }}` — use `flex items-center`
+- `style={{ padding: '7px 12px' }}` — use `px-3 py-[7px]`
+- `style={{ whiteSpace: 'nowrap' }}` — use `whitespace-nowrap`
+- `style={{ cursor: 'pointer' }}` — use `cursor-pointer`
+- `style={{ flexShrink: 0 }}` — use `shrink-0`
+- `style={{ overflow: 'hidden' }}` — use `overflow-hidden`
 
 ---
 
-## 6. Page Layout — Section Order
+## 6. Component Design
+
+### 6.1 Navigation Bar
+
+- Background: `bg-us-blue`
+- Logo: `text-us-cream font-bold text-[15px] tracking-[0.3px]`
+- Nav links: `text-us-cream/80 text-[13px] hover:text-us-cream transition-colors duration-150`
+- Mobile: hamburger (`sm:hidden`) with dropdown drawer (`bg-us-blue/95`)
+- Desktop links: `hidden sm:flex gap-7`
+
+### 6.2 Hero Section
+
+- Section: `min-h-screen bg-us-dark flex flex-col relative overflow-hidden`
+- Headline: `text-[clamp(36px,8vw,72px)] font-bold text-us-cream leading-[1.12]`
+- Quote block: `text-us-cream/70 italic border-l-2 border-us-orange/50 pl-4 transition-opacity duration-300`
+- CTA primary: `bg-us-orange text-white rounded-full px-6 sm:px-8 py-3 font-bold hover:bg-orange-500 transition-colors duration-200`
+- CTA secondary: `bg-transparent text-us-cream/85 border-2 border-us-cream/40 rounded-full hover:border-us-cream/70 transition-all duration-200`
+
+### 6.3 Statistics / Data Cards
+
+- Card: `bg-us-surface rounded-xl px-6 py-7 shadow-sm flex-1 min-w-40`
+- Stat number: `text-[clamp(40px,6vw,58px)] font-bold text-us-orange leading-none`
+- Stat label: `text-[15px] font-semibold text-us-dark mt-2 leading-snug`
+- Grid: `grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5`
+
+### 6.4 Quote / Voice Blocks
+
+- Section: `bg-us-burg py-14 sm:py-20 px-5 sm:px-10 relative overflow-hidden`
+- Quote card: `bg-white/7 rounded-xl px-5 sm:px-10 py-6 sm:py-9 border-l-4 border-us-orange`
+- Quote text: `italic text-[clamp(16px,2.5vw,21px)] text-us-cream leading-[1.85]`
+- Attribution: `text-[12px] text-us-cream/45 tracking-[0.5px]`
+
+### 6.5 Buttons
+
+| Variant | Tailwind classes |
+|---|---|
+| Primary | `bg-us-orange text-white rounded-full px-8 py-3 font-bold hover:bg-orange-500 transition-colors duration-200` |
+| Secondary | `bg-us-blue text-white rounded-full px-8 py-3 font-bold hover:bg-[#244868] transition-colors duration-200` |
+| Outlined | `bg-transparent text-us-blue border-2 border-us-blue rounded-full px-7 py-3 hover:bg-us-blue hover:text-white transition-all duration-200` |
+| Ghost | `bg-transparent text-us-orange hover:underline` |
+
+### 6.6 Anonymous Wall
+
+The wall's top bar, filter chips, submit panel, and canvas overlay must be migrated to Tailwind. Only exception: the canvas `transform: translate()` and animated dot-grid SVG.
+
+- Top bar: `flex items-center gap-2 px-3 sm:px-5 h-[52px] bg-us-dark border-b border-white/8 shrink-0 z-30 overflow-x-auto`
+- Filter chips (active): `bg-us-orange text-white rounded-full px-3 py-1 text-[11px] whitespace-nowrap cursor-pointer transition-all duration-150`
+- Filter chips (inactive): `bg-white/8 text-us-cream/60 border border-white/12 rounded-full px-3 py-1 text-[11px] whitespace-nowrap cursor-pointer`
+- Submit panel: `flex items-start gap-3 px-3 sm:px-5 py-3 bg-us-bg border-b-2 border-us-dark/60 shrink-0 z-[29]`
+- Submit button: `bg-us-orange text-white rounded px-4 py-[10px] text-[13px] font-bold flex items-center gap-1.5 cursor-pointer`
+- Avatar button: `bg-white/8 border border-white/15 rounded-full w-9 h-9 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer`
+
+### 6.7 Section Dividers
+
+Use full-width wave SVG dividers between sections:
+- `#f9f4eb` → `#1e3a4f` → `#f9f4eb` → `#f0e9d8`
+- SVG: `block w-full mt-auto` with `preserveAspectRatio="none"`
+
+### 6.8 Footer
+
+- Section: `bg-us-dark border-t border-white/6 py-10 px-5 sm:px-10`
+- Content: `max-w-240 mx-auto flex flex-col items-center gap-4 text-center`
+- Tagline: `italic text-[16px] text-us-cream/65 leading-[1.7]`
+- Links: `text-[12px] text-us-cream/40 hover:text-us-cream/70 transition-colors duration-150`
+
+---
+
+## 7. Page Layout — Section Order
 
 ```
 ┌─────────────────────────────────┐
@@ -205,7 +225,7 @@ Use full-width wave SVG dividers between sections, alternating background colors
 
 ---
 
-## 7. Iconography & Illustration
+## 8. Iconography & Illustration
 
 - Style: **line icons** with a slight warmth — not sharp/tech, not overly cute
 - Icon stroke color: `#2f597a` default, `#ff751f` for emphasis
@@ -215,7 +235,7 @@ Use full-width wave SVG dividers between sections, alternating background colors
 
 ---
 
-## 8. Motion & Animation
+## 9. Motion & Animation
 
 - Principle: **gentle and purposeful** — nothing that feels flashy or distracting from the emotional content
 - Scroll animations: `fade-up` on section entry, `200ms` delay, `ease-out`
@@ -227,7 +247,7 @@ Use full-width wave SVG dividers between sections, alternating background colors
 
 ---
 
-## 9. Responsive Breakpoints
+## 10. Responsive Breakpoints
 
 | Breakpoint | Width | Notes |
 |---|---|---|
@@ -241,7 +261,7 @@ Use full-width wave SVG dividers between sections, alternating background colors
 
 ---
 
-## 10. Accessibility
+## 11. Accessibility
 
 - Color contrast: all text/background combos meet WCAG AA (4.5:1 for body, 3:1 for large text)
 - Focus indicators: visible `2px solid #ff751f` outline on all interactive elements
@@ -251,7 +271,7 @@ Use full-width wave SVG dividers between sections, alternating background colors
 
 ---
 
-## 11. Tone Alignment
+## 12. Tone Alignment
 
 Every visual element should feel like it was made by someone who **cares**, not a corporation. The palette's warm parchment, the burgundy depth, the orange spark — together they say: *"This is a safe place. We see you."*
 

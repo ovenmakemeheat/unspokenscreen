@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, AlertCircle, MessageSquareHeart, BarChart2, Layers } from "lucide-react";
 import type { Route } from "next";
 import { NAV_LINKS } from "./nav-links";
+
+const NAV_ICONS = [AlertCircle, MessageSquareHeart, BarChart2, Layers];
 
 const QUOTES = [
   "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
@@ -16,7 +18,7 @@ const QUOTES = [
 export function Hero() {
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -36,13 +38,14 @@ export function Hero() {
   return (
     <section id="hero" className="min-h-screen bg-us-dark flex flex-col relative overflow-hidden">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-5 sm:px-10 h-15 bg-us-blue shrink-0">
-        <span className="text-us-cream text-[15px] font-bold tracking-[0.3px]">
+      <nav className="flex items-center justify-between px-5 sm:px-10 h-14 bg-us-blue shrink-0">
+        {/* Logo — hidden on mobile */}
+        <span className="hidden sm:block text-us-cream text-[15px] font-bold tracking-[0.3px]">
           Unspoken Screen
         </span>
 
         {/* Desktop nav links */}
-        <div className="hidden sm:flex gap-7">
+        <div className="hidden sm:flex gap-7 sm:ml-auto">
           {NAV_LINKS.map(([label, href]) => (
             <Link
               key={label}
@@ -54,34 +57,39 @@ export function Hero() {
           ))}
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="sm:hidden text-us-cream/80 p-1"
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
-        </button>
+        {/* Mobile: project name only — compact, centered */}
+        <span className="sm:hidden text-us-cream text-[13px] font-bold tracking-[0.5px] mx-auto">
+          Unspoken Screen
+        </span>
       </nav>
 
-      {/* Mobile dropdown menu */}
-      {menuOpen && (
-        <div className="sm:hidden bg-us-blue/95 flex flex-col px-5 py-4 gap-4 shrink-0 z-20">
-          {NAV_LINKS.map(([label, href]) => (
+      {/* Mobile bottom tab bar */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-us-blue border-t border-white/10 flex">
+        {NAV_LINKS.map(([label, href], i) => {
+          const Icon = NAV_ICONS[i]!;
+          const isActive = activeTab === label;
+          return (
             <Link
               key={label}
               href={href}
-              onClick={() => setMenuOpen(false)}
-              className="text-us-cream/80 text-[14px] no-underline hover:text-us-cream transition-colors duration-150"
+              onClick={() => setActiveTab(label)}
+              className="flex-1 flex flex-col items-center justify-center py-2 gap-[3px] no-underline transition-colors"
             >
-              {label}
+              <Icon
+                size={18}
+                strokeWidth={isActive ? 2.5 : 1.8}
+                className={isActive ? "text-us-orange" : "text-us-cream/50"}
+              />
+              <span className={`text-[9px] tracking-[0.3px] ${isActive ? "text-us-orange font-bold" : "text-us-cream/50"}`}>
+                {label}
+              </span>
             </Link>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      {/* Hero body */}
-      <div className="flex-1 flex flex-col items-start justify-center px-5 sm:px-10 pt-12 sm:pt-20 pb-10 sm:pb-16 max-w-190 mx-auto w-full">
+      {/* Hero body — extra bottom padding on mobile for tab bar */}
+      <div className="flex-1 flex flex-col items-start justify-center px-5 sm:px-10 pt-12 sm:pt-20 pb-24 sm:pb-16 max-w-190 mx-auto w-full">
         {/* Eyebrow */}
         <p className="text-us-orange text-[10px] sm:text-[11px] tracking-[3px] sm:tracking-[4px] uppercase mb-4 font-semibold">
           หน้าจอที่อยากให้ครอบครัวเห็น

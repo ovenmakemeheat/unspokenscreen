@@ -22,6 +22,7 @@ export type NoteData = {
   avatarId: string | null;
   imageData: string | null;
   userId: number | null;
+  displayName: string | null;
 };
 
 type Props = NoteData & {
@@ -29,11 +30,14 @@ type Props = NoteData & {
   zIndex?: number;
   isOwner?: boolean;
   isNew?: boolean;
+  fetchIndex?: number; // position in initial load batch → stagger delay
   onExpand: () => void;
   onHeart: () => void;
   onDelete?: () => void;
   onEdit?: (text: string, tag: string) => void;
 };
+
+const ANON_LABEL = "ไม่ระบุตัวตน";
 
 export function FloatingNote({
   text,
@@ -49,10 +53,12 @@ export function FloatingNote({
   width,
   delay,
   imageData,
+  displayName,
   resolvedAvatar,
   zIndex = 2,
   isOwner = false,
   isNew = false,
+  fetchIndex,
   onExpand,
   onHeart,
   onDelete,
@@ -99,9 +105,19 @@ export function FloatingNote({
     setEditing(false);
   };
 
+  const isFetchEntry = fetchIndex !== undefined;
+  const fetchDelay = isFetchEntry ? `${Math.min(fetchIndex * 55, 900)}ms` : "0ms";
+  const animClass = editing
+    ? ""
+    : isFetchEntry
+    ? `us-note-fetch ${floatClass}`
+    : !appeared
+    ? "us-note-appear"
+    : floatClass;
+
   return (
     <div
-      className={editing ? "" : !appeared ? "us-note-appear" : floatClass}
+      className={`${animClass} rounded-sm px-3 pt-3.5 pb-2.5 select-none ${editing ? "cursor-default" : "cursor-pointer"}`}
       onClick={editing ? undefined : onExpand}
       style={{
         position: "absolute",
@@ -111,27 +127,17 @@ export function FloatingNote({
         width,
         background: color,
         color: textColor,
-        borderRadius: 4,
-        padding: "14px 12px 10px",
+        animationDelay: isFetchEntry ? fetchDelay : delay,
+        zIndex,
         boxShadow: isOwner
           ? "0 0 0 2px var(--us-orange), 0 4px 14px rgba(0,0,0,0.2)"
           : "0 4px 14px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1)",
-        cursor: editing ? "default" : "pointer",
-        animationDelay: delay,
-        zIndex,
-        userSelect: "none",
       }}
     >
       {/* Pin */}
       <div
+        className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full"
         style={{
-          position: "absolute",
-          top: -8,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 12,
-          height: 12,
-          borderRadius: "50%",
           background: isOwner ? "var(--us-orange)" : "rgba(107,96,85,0.55)",
           boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
         }}
@@ -141,38 +147,18 @@ export function FloatingNote({
       {isOwner && !editing && (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute",
-            top: 4,
-            right: 4,
-            display: "flex",
-            gap: 2,
-          }}
+          className="absolute top-1 right-1 flex gap-0.5"
         >
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 2,
-              color: isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.4)",
-              display: "flex",
-            }}
+            className="bg-transparent border-none cursor-pointer p-0.5 flex opacity-35 hover:opacity-70 transition-opacity"
             title="แก้ไข"
           >
             <Pencil size={10} strokeWidth={2} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 2,
-              color: "#e53e3e",
-              display: "flex",
-            }}
+            className="bg-transparent border-none cursor-pointer p-0.5 flex text-red-500"
             title="ลบ"
           >
             <Trash2 size={10} strokeWidth={2} />
@@ -184,58 +170,22 @@ export function FloatingNote({
       {confirmDelete && (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute",
-            top: 20,
-            right: 4,
-            background: "#1e1e1e",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 8,
-            padding: "8px 10px",
-            zIndex: 10,
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
-            minWidth: 110,
-          }}
+          className="absolute top-5 right-1 bg-[#1e1e1e] border border-white/12 rounded-lg px-2.5 py-2 z-10 flex flex-col gap-2 shadow-lg min-w-[110px]"
         >
-          <span style={{ fontSize: 10, color: "#f9f4eb", whiteSpace: "nowrap", fontFamily: "'Sarabun', sans-serif" }}>
+          <span className="text-[10px] text-us-cream whitespace-nowrap">
             ลบโน้ตนี้?
           </span>
-          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+          <div className="flex gap-1.5 justify-end">
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "none",
-                borderRadius: 4,
-                width: 24,
-                height: 24,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#f9f4eb",
-              }}
+              className="bg-white/10 border-none rounded w-6 h-6 cursor-pointer flex items-center justify-center text-us-cream"
               title="ยกเลิก"
             >
               <X size={12} strokeWidth={2.5} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); onDelete?.(); }}
-              style={{
-                background: "#e53e3e",
-                border: "none",
-                borderRadius: 4,
-                width: 24,
-                height: 24,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-              }}
+              className="bg-red-500 border-none rounded w-6 h-6 cursor-pointer flex items-center justify-center text-white"
               title="ยืนยันลบ"
             >
               <Check size={12} strokeWidth={2.5} />
@@ -245,24 +195,14 @@ export function FloatingNote({
       )}
 
       {/* Tag + avatar row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 5,
-        }}
-      >
-        <div
-          style={{
-            fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-            fontSize: 8,
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-            opacity: 0.55,
-          }}
-        >
-          {tag}
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex flex-col gap-[1px]">
+          <div className="font-[family-name:var(--font-patrick-hand)] text-[8px] tracking-[1.5px] uppercase opacity-55">
+            {tag}
+          </div>
+          <div className="font-[family-name:var(--font-patrick-hand)] text-[8px] opacity-40">
+            {displayName ?? ANON_LABEL}
+          </div>
         </div>
         {resolvedAvatar && <AvatarFace preset={resolvedAvatar} size={20} />}
       </div>
@@ -279,31 +219,24 @@ export function FloatingNote({
               if (e.key === "Escape") { setEditing(false); setEditText(text); }
             }}
             rows={3}
+            className="w-full rounded-sm px-1.5 py-1 font-[family-name:var(--font-lora)] italic text-[12px] leading-relaxed resize-none outline-none"
             style={{
-              width: "100%",
               background: "rgba(255,255,255,0.15)",
               border: `1px solid ${borderColor}`,
-              borderRadius: 3,
-              padding: "4px 6px",
-              fontFamily: "var(--font-lora), 'Lora', Georgia, serif",
-              fontStyle: "italic",
-              fontSize: 12,
-              lineHeight: 1.6,
               color: textColor,
-              resize: "none",
-              outline: "none",
             }}
           />
-          <div style={{ display: "flex", gap: 4, marginTop: 4, justifyContent: "flex-end" }}>
+          <div className="flex gap-1 mt-1 justify-end">
             <button
               onClick={(e) => { e.stopPropagation(); setEditing(false); setEditText(text); }}
-              style={{ background: "none", border: `1px solid ${borderColor}`, borderRadius: 3, padding: "2px 6px", fontSize: 9, cursor: "pointer", color: textColor }}
+              className="bg-transparent rounded-sm px-1.5 py-0.5 text-[9px] cursor-pointer"
+              style={{ border: `1px solid ${borderColor}`, color: textColor }}
             >
               ยกเลิก
             </button>
             <button
               onClick={submitEdit}
-              style={{ background: "var(--us-orange)", border: "none", borderRadius: 3, padding: "2px 6px", fontSize: 9, cursor: "pointer", color: "#fff" }}
+              className="bg-us-orange border-none rounded-sm px-1.5 py-0.5 text-[9px] cursor-pointer text-white"
             >
               บันทึก
             </button>
@@ -314,22 +247,10 @@ export function FloatingNote({
           src={imageData}
           alt="handwritten note"
           draggable={false}
-          style={{
-            width: "100%",
-            borderRadius: 3,
-            display: "block",
-            pointerEvents: "none",
-          }}
+          className="w-full rounded-sm block pointer-events-none"
         />
       ) : (
-        <div
-          style={{
-            fontFamily: "var(--font-lora), 'Lora', Georgia, serif",
-            fontStyle: "italic",
-            fontSize: 12,
-            lineHeight: 1.6,
-          }}
-        >
+        <div className="font-[family-name:var(--font-lora)] italic text-[12px] leading-relaxed">
           &ldquo;{text}&rdquo;
         </div>
       )}
@@ -337,33 +258,14 @@ export function FloatingNote({
       {/* Interaction row */}
       {!editing && (
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 10,
-            paddingTop: 7,
-            borderTop: `1px solid ${borderColor}`,
-          }}
+          className="flex items-center justify-between mt-2.5 pt-[7px]"
+          style={{ borderTop: `1px solid ${borderColor}` }}
         >
           <button
             onClick={doHeart}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 3,
-              padding: "2px 4px",
-              borderRadius: 4,
-              color: "inherit",
-            }}
+            className="bg-transparent border-none cursor-pointer flex items-center gap-[3px] px-1 py-0.5 rounded"
           >
-            <span
-              className={heartAnim ? "us-heart-pop" : ""}
-              style={{ display: "inline-flex" }}
-            >
+            <span className={heartAnim ? "us-heart-pop" : ""} style={{ display: "inline-flex" }}>
               <Heart
                 size={13}
                 fill={hearted ? heartColor : "none"}
@@ -372,36 +274,14 @@ export function FloatingNote({
                 style={{ transition: "all 0.2s" }}
               />
             </span>
-            <span
-              style={{
-                fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-                fontSize: 10,
-                opacity: 0.6,
-              }}
-            >
+            <span className="font-[family-name:var(--font-patrick-hand)] text-[10px] opacity-60">
               {hearts}
             </span>
           </button>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onExpand();
-            }}
-            style={{
-              background: "none",
-              border: "1px solid currentColor",
-              borderRadius: 10,
-              padding: "2px 7px",
-              fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-              fontSize: 9,
-              opacity: 0.5,
-              cursor: "pointer",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              gap: 3,
-            }}
+            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="bg-transparent border border-current rounded-[10px] px-[7px] py-0.5 font-[family-name:var(--font-patrick-hand)] text-[9px] opacity-50 cursor-pointer flex items-center gap-[3px]"
           >
             <MessageCircle size={9} strokeWidth={2} />
             {replies.length > 0 ? replies.length : "ตอบกลับ"}

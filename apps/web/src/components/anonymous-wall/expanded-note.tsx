@@ -13,12 +13,15 @@ type Props = {
   note: NoteData;
   resolvedAvatar: AvatarPreset | undefined;
   replyAvatar?: AvatarPreset | null;
+  replyDisplayName?: string | null;
   onClose: () => void;
   onHeart: () => void;
   onReply: (text: string, from: string, avatarId: string | null) => Promise<Reply>;
 };
 
-export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHeart, onReply }: Props) {
+const ANON_LABEL = "ไม่ระบุตัวตน";
+
+export function ExpandedNote({ note, resolvedAvatar, replyAvatar, replyDisplayName, onClose, onHeart, onReply }: Props) {
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState(note.replies);
   const [hearts, setHearts] = useState(note.hearts);
@@ -29,7 +32,7 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
     if (!reply.trim() || sending) return;
     setSending(true);
     try {
-      const newReply = await onReply(reply.trim(), "ครอบครัว", replyAvatar?.id ?? null);
+      const newReply = await onReply(reply.trim(), replyDisplayName ?? "ครอบครัว", replyAvatar?.id ?? null);
       setReplies((r) => [...r, newReply]);
       setReply("");
     } finally {
@@ -41,90 +44,46 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
   const heartColor = hearted ? "#e53e3e" : isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.5)";
 
   return (
+    /* Backdrop */
     <div
       onClick={onClose}
-      style={{
-        position: "absolute",
-        inset: 0,
-        background: "rgba(30,58,79,0.6)",
-        zIndex: 50,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backdropFilter: "blur(3px)",
-      }}
+      className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+      style={{ background: "rgba(30,58,79,0.6)" }}
     >
+      {/* Card */}
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 310,
-          background: note.color,
-          color: note.textColor ?? "#1a1a1a",
-          borderRadius: 8,
-          padding: "20px 18px",
-          boxShadow: "0 16px 48px rgba(0,0,0,0.3)",
-          position: "relative",
-          maxHeight: "80vh",
-          overflowY: "auto",
-        }}
+        className="relative w-[min(310px,92vw)] rounded-lg px-[18px] py-5 shadow-2xl max-h-[80vh] overflow-y-auto"
+        style={{ background: note.color, color: note.textColor ?? "#1a1a1a" }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "inherit",
-            opacity: 0.4,
-            display: "flex",
-            padding: 4,
-          }}
+          className="absolute top-2.5 right-2.5 bg-transparent border-none cursor-pointer p-1 flex opacity-40 hover:opacity-70 transition-opacity"
         >
           <X size={16} strokeWidth={2} />
         </button>
 
         {/* Tag + author avatar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-              fontSize: 9,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              opacity: 0.4,
-            }}
-          >
-            {note.tag}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col gap-[2px]">
+            <div className="font-[family-name:var(--font-patrick-hand)] text-[9px] tracking-[1.5px] uppercase opacity-40">
+              {note.tag}
+            </div>
+            <div className="font-[family-name:var(--font-patrick-hand)] text-[9px] opacity-35">
+              {note.displayName ?? ANON_LABEL}
+            </div>
           </div>
           {resolvedAvatar && <AvatarFace preset={resolvedAvatar} size={28} />}
         </div>
 
         {/* Full text */}
-        <div
-          style={{
-            fontFamily: "var(--font-lora), 'Lora', Georgia, serif",
-            fontStyle: "italic",
-            fontSize: 15,
-            lineHeight: 1.8,
-            marginBottom: 12,
-          }}
-        >
+        <div className="font-[family-name:var(--font-lora)] italic text-[15px] leading-[1.8] mb-3">
           &ldquo;{note.text}&rdquo;
         </div>
 
         {/* Heart row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+        <div className="flex items-center gap-1.5 mb-4">
           <button
             onClick={() => {
               if (!hearted) {
@@ -133,15 +92,7 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
                 onHeart();
               }
             }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              color: "inherit",
-              padding: 0,
-            }}
+            className="bg-transparent border-none cursor-pointer flex items-center p-0"
           >
             <Heart
               size={18}
@@ -151,33 +102,15 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
               style={{ transition: "all 0.2s" }}
             />
           </button>
-          <span
-            style={{
-              fontFamily: "var(--font-sarabun), 'Sarabun', sans-serif",
-              fontSize: 11,
-              opacity: 0.5,
-            }}
-          >
+          <span className="text-[11px] opacity-50">
             {hearts} คนส่งกำลังใจ
           </span>
         </div>
 
         {/* Family replies */}
         {replies.length > 0 && (
-          <div style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-            <div
-              style={{
-                fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-                fontSize: 10,
-                opacity: 0.4,
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                marginBottom: 4,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
+          <div className="mb-3 flex flex-col gap-1.5">
+            <div className="font-[family-name:var(--font-patrick-hand)] text-[10px] opacity-40 tracking-[1px] uppercase mb-1 flex items-center gap-1.5">
               <Users size={10} strokeWidth={2} />
               ครอบครัวตอบกลับ
             </div>
@@ -188,37 +121,19 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
               return (
                 <div
                   key={r.id}
-                  style={{
-                    background: "rgba(255,255,255,0.6)",
-                    borderRadius: 6,
-                    padding: "8px 10px",
-                    borderLeft: "3px solid var(--us-blue)",
-                  }}
+                  className="bg-white/60 rounded-md px-2.5 py-2 border-l-[3px] border-us-blue"
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                  <div className="flex items-center gap-1.5 mb-[3px]">
                     {rAvatar ? (
                       <AvatarFace preset={rAvatar} size={16} />
                     ) : (
                       <Users size={11} color="var(--us-blue)" strokeWidth={2} />
                     )}
-                    <span
-                      style={{
-                        fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-                        fontSize: 9,
-                        color: "var(--us-blue)",
-                      }}
-                    >
+                    <span className="font-[family-name:var(--font-patrick-hand)] text-[9px] text-us-blue">
                       {r.from}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-sarabun), 'Sarabun', sans-serif",
-                      fontSize: 12,
-                      color: "#1a1a1a",
-                      lineHeight: 1.5,
-                    }}
-                  >
+                  <div className="text-[12px] text-[#1a1a1a] leading-snug">
                     {r.text}
                   </div>
                 </div>
@@ -228,24 +143,9 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
         )}
 
         {/* Reply input */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.7)",
-            borderRadius: 6,
-            overflow: "hidden",
-            border: "1.5px solid rgba(47,89,122,0.3)",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-patrick-hand), 'Patrick Hand', cursive",
-              fontSize: 10,
-              color: "var(--us-blue)",
-              padding: "6px 10px 2px",
-              letterSpacing: 0.5,
-            }}
-          >
-            ส่งกำลังใจในฐานะครอบครัว
+        <div className="bg-white/70 rounded-md overflow-hidden border-[1.5px] border-us-blue/30">
+          <div className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-blue px-2.5 pt-1.5 pb-0.5 tracking-[0.5px]">
+            {replyDisplayName ? `ส่งกำลังใจในฐานะ ${replyDisplayName}` : "ส่งกำลังใจในฐานะครอบครัว"}
           </div>
           <textarea
             value={reply}
@@ -257,46 +157,14 @@ export function ExpandedNote({ note, resolvedAvatar, replyAvatar, onClose, onHea
               }
             }}
             placeholder="พิมพ์ข้อความถึงลูก..."
-            style={{
-              width: "100%",
-              border: "none",
-              background: "transparent",
-              padding: "4px 10px 8px",
-              fontFamily: "var(--font-sarabun), 'Sarabun', sans-serif",
-              fontSize: 12,
-              resize: "none",
-              outline: "none",
-              minHeight: 52,
-              color: "#1a1a1a",
-            }}
+            className="w-full border-none bg-transparent px-2.5 pb-2 text-[12px] resize-none outline-none min-h-[52px] text-[#1a1a1a]"
           />
-          <div
-            style={{
-              padding: "4px 8px 8px",
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
+          <div className="px-2 pb-2 flex justify-end items-center gap-1.5">
             {replyAvatar && <AvatarFace preset={replyAvatar} size={20} />}
             <button
               onClick={submit}
               disabled={sending}
-              style={{
-                background: "var(--us-blue)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 14,
-                padding: "5px 12px",
-                fontFamily: "var(--font-sarabun), 'Sarabun', sans-serif",
-                fontSize: 11,
-                cursor: sending ? "not-allowed" : "pointer",
-                opacity: sending ? 0.6 : 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
+              className={`bg-us-blue text-white border-none rounded-full px-3 py-[5px] text-[11px] flex items-center gap-1.5 transition-opacity ${sending ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             >
               ส่ง
               <Send size={11} strokeWidth={2} />

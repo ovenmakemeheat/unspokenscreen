@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  PencilLine,
   X,
   Check,
   Users,
@@ -11,6 +10,9 @@ import {
   Loader2,
   Keyboard,
   Pen,
+  ZoomIn,
+  ZoomOut,
+  SlidersHorizontal,
 } from "lucide-react";
 import { FloatingNote, type NoteData } from "./floating-note";
 import { ExpandedNote } from "./expanded-note";
@@ -46,6 +48,7 @@ function resolveAvatar(avatarId: string | null): AvatarPreset | undefined {
 export function AnonymousWall() {
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchedIds, setFetchedIds] = useState<Set<number>>(new Set());
   const [expanded, setExpanded] = useState<NoteData | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
@@ -57,22 +60,64 @@ export function AnonymousWall() {
   const [showDrawing, setShowDrawing] = useState(false);
   const [newNoteId, setNewNoteId] = useState<number | null>(null);
 
-  // Avatar state
   const [avatar, setAvatar] = useState<AvatarPreset | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+  const [showMobileSubmit, setShowMobileSubmit] = useState(false);
 
-  // Canvas pan state
+  const MIN_SCALE = 0.3;
+  const MAX_SCALE = 2.5;
+
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const scaleRef = useRef(1);
   const isDragging = useRef(false);
   const didMove = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const lastOffset = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
   const panRafRef = useRef<number | null>(null);
+  // touch pinch
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartScale = useRef(1);
+  const pinchStartOffset = useRef({ x: 0, y: 0 });
+  const pinchMidpoint = useRef({ x: 0, y: 0 });
 
-  // Keep offsetRef in sync so panTo can read current value
   useEffect(() => { offsetRef.current = offset; }, [offset]);
+  useEffect(() => { scaleRef.current = scale; }, [scale]);
+
+  const applyZoom = useCallback((newScale: number, originX: number, originY: number) => {
+    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+    const prev = scaleRef.current;
+    const ox = offsetRef.current.x;
+    const oy = offsetRef.current.y;
+    // keep the canvas point under (originX, originY) fixed
+    const nx = originX - (originX - ox) * (clamped / prev);
+    const ny = originY - (originY - oy) * (clamped / prev);
+    scaleRef.current = clamped;
+    offsetRef.current = { x: nx, y: ny };
+    setScale(clamped);
+    setOffset({ x: nx, y: ny });
+  }, []);
+
+  // Wheel zoom — attached via addEventListener so we can pass passive:false
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const originX = e.clientX - rect.left;
+      const originY = e.clientY - rect.top;
+      // ctrlKey means pinch-to-zoom gesture on trackpad
+      const delta = e.ctrlKey ? e.deltaY * 0.01 : e.deltaY * 0.001;
+      applyZoom(scaleRef.current * (1 - delta), originX, originY);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [applyZoom]);
 
   const panTo = useCallback((targetX: number, targetY: number) => {
     if (panRafRef.current !== null) cancelAnimationFrame(panRafRef.current);
@@ -80,9 +125,7 @@ export function AnonymousWall() {
     const start = performance.now();
     const fromX = offsetRef.current.x;
     const fromY = offsetRef.current.y;
-
-    const ease = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic
-
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
     const step = (now: number) => {
       const t = Math.min((now - start) / DURATION, 1);
       const e = ease(t);
@@ -96,18 +139,23 @@ export function AnonymousWall() {
     panRafRef.current = requestAnimationFrame(step);
   }, []);
 
-  // ── Session init ───────────────────────────────────────────
   useEffect(() => {
     const stored = localStorage.getItem("us_wall_token");
     const storedId = localStorage.getItem("us_wall_user_id");
+    const storedName = localStorage.getItem("us_wall_display_name") ?? "";
     if (stored && storedId) {
       setUserToken(stored);
       setUserId(Number(storedId));
+      setDisplayName(storedName);
       return;
     }
-    fetch(`${API}/api/wall/session`, { method: "POST" })
+    fetch(`${API}/api/wall/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
       .then((r) => r.json())
-      .then((data: { token: string; userId: number }) => {
+      .then((data: { token: string; userId: number; displayName: string | null }) => {
         localStorage.setItem("us_wall_token", data.token);
         localStorage.setItem("us_wall_user_id", String(data.userId));
         setUserToken(data.token);
@@ -116,11 +164,32 @@ export function AnonymousWall() {
       .catch(console.error);
   }, []);
 
-  // ── Fetch notes from API ───────────────────────────────────
+  const saveName = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    localStorage.setItem("us_wall_display_name", trimmed);
+    setDisplayName(trimmed);
+    if (!userToken) return;
+    try {
+      await fetch(`${API}/api/wall/session`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-user-token": userToken },
+        body: JSON.stringify({ name: trimmed }),
+      });
+    } catch (err) {
+      console.error("Failed to update display name:", err);
+    }
+  }, [userToken]);
+
   useEffect(() => {
     fetch(`${API}/api/wall/notes`)
       .then((r) => r.json())
-      .then((data: NoteData[]) => setNotes(data))
+      .then((data: NoteData[]) => {
+        setNotes(data);
+        const ids = new Set(data.map((n) => n.id));
+        setFetchedIds(ids);
+        // clear after all stagger animations finish so filter changes don't re-trigger
+        setTimeout(() => setFetchedIds(new Set()), data.length * 55 + 800);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -130,7 +199,6 @@ export function AnonymousWall() {
       ? notes
       : notes.filter((n) => n.tag === activeFilter);
 
-  // ── Pan handlers ──────────────────────────────────────────
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest("button, textarea, input")) return;
@@ -157,6 +225,23 @@ export function AnonymousWall() {
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+      if (e.touches.length === 2) {
+        // pinch start
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        pinchStartDist.current = dist;
+        pinchStartScale.current = scaleRef.current;
+        pinchStartOffset.current = { ...offsetRef.current };
+        const rect = canvasRef.current?.getBoundingClientRect();
+        pinchMidpoint.current = {
+          x: (t0.clientX + t1.clientX) / 2 - (rect?.left ?? 0),
+          y: (t0.clientY + t1.clientY) / 2 - (rect?.top ?? 0),
+        };
+        isDragging.current = false;
+        return;
+      }
+      pinchStartDist.current = null;
       isDragging.current = true;
       didMove.current = false;
       dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -166,12 +251,22 @@ export function AnonymousWall() {
   );
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDist.current !== null) {
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      const newScale = pinchStartScale.current * (dist / pinchStartDist.current);
+      applyZoom(newScale, pinchMidpoint.current.x, pinchMidpoint.current.y);
+      didMove.current = true;
+      return;
+    }
     if (!isDragging.current) return;
     const dx = e.touches[0].clientX - dragStart.current.x;
     const dy = e.touches[0].clientY - dragStart.current.y;
     didMove.current = true;
     setOffset({ x: lastOffset.current.x + dx, y: lastOffset.current.y + dy });
-  }, []);
+  }, [applyZoom]);
 
   const handleNoteExpand = useCallback((note: NoteData) => {
     if (didMove.current) return;
@@ -189,26 +284,22 @@ export function AnonymousWall() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // ── Find a placement in an empty area ─────────────────────
   const findPosition = useCallback(
     (noteWidth: number, noteHeight: number): { x: number; y: number } => {
       const cw = canvasRef.current?.clientWidth ?? 800;
       const ch = canvasRef.current?.clientHeight ?? 500;
       const cx = -offset.x + cw / 2;
       const cy = -offset.y + ch / 2;
-
       const NOTE_H = 120;
-      const JITTER = 18; // small random nudge so grid rows don't look mechanical
+      const JITTER = 18;
       const CELL_W = noteWidth + 20;
       const CELL_H = NOTE_H + 20;
-
-      // Grid radiates outward in rings so closer cells are checked first
       const RINGS = 6;
       const candidates: { x: number; y: number; dist: number }[] = [];
       for (let ring = 0; ring <= RINGS; ring++) {
         for (let col = -ring; col <= ring; col++) {
           for (let row = -ring; row <= ring; row++) {
-            if (Math.abs(col) !== ring && Math.abs(row) !== ring) continue; // only perimeter of ring
+            if (Math.abs(col) !== ring && Math.abs(row) !== ring) continue;
             const bx = cx + col * CELL_W - noteWidth / 2;
             const by = cy + row * CELL_H - NOTE_H / 2;
             const dist = Math.hypot(col, row);
@@ -216,29 +307,21 @@ export function AnonymousWall() {
           }
         }
       }
-
       const isClear = (x: number, y: number) => {
         for (const n of notes) {
           const nw = n.width ?? 150;
           const ox = Math.max(0, Math.min(x + noteWidth, n.x + nw) - Math.max(x, n.x));
           const oy = Math.max(0, Math.min(y + noteHeight, n.y + NOTE_H) - Math.max(y, n.y));
-          if (ox * oy > 0) return false; // any overlap = not clear
+          if (ox * oy > 0) return false;
         }
         return true;
       };
-
-      // Sort by distance from viewport center, try each cell
       candidates.sort((a, b) => a.dist - b.dist);
       for (const { x, y } of candidates) {
         if (isClear(x, y)) {
-          return {
-            x: x + (Math.random() - 0.5) * JITTER,
-            y: y + (Math.random() - 0.5) * JITTER,
-          };
+          return { x: x + (Math.random() - 0.5) * JITTER, y: y + (Math.random() - 0.5) * JITTER };
         }
       }
-
-      // All grid cells occupied — place in the closest cell with the least overlap
       let best = candidates[0]!;
       let bestOverlap = Infinity;
       for (const c of candidates) {
@@ -251,21 +334,16 @@ export function AnonymousWall() {
         }
         if (totalOverlap < bestOverlap) { bestOverlap = totalOverlap; best = c; }
       }
-      return {
-        x: best.x + (Math.random() - 0.5) * JITTER,
-        y: best.y + (Math.random() - 0.5) * JITTER,
-      };
+      return { x: best.x + (Math.random() - 0.5) * JITTER, y: best.y + (Math.random() - 0.5) * JITTER };
     },
     [notes, offset]
   );
 
-  // ── Submit new note (shared) ───────────────────────────────
   const postNote = async (text: string, imageData?: string) => {
     const colorPick = NOTE_COLORS[notes.length % NOTE_COLORS.length];
     const noteWidth = imageData ? 180 : 145 + Math.floor(Math.random() * 25);
     const noteHeight = imageData ? 160 : 120;
     const { x: vx, y: vy } = findPosition(noteWidth, noteHeight);
-
     const payload = {
       text,
       tag: selectedTag,
@@ -280,7 +358,6 @@ export function AnonymousWall() {
       avatarId: avatar?.id ?? null,
       imageData: imageData ?? null,
     };
-
     const res = await fetch(`${API}/api/wall/notes`, {
       method: "POST",
       headers: {
@@ -295,10 +372,10 @@ export function AnonymousWall() {
     setTimeout(() => setNewNoteId(null), 600);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 2000);
-
     const cw = canvasRef.current?.clientWidth ?? 800;
     const ch = canvasRef.current?.clientHeight ?? 500;
-    panTo(-(created.x + (created.width ?? 150) / 2) + cw / 2, -(created.y + 60) + ch / 2);
+    const s = scaleRef.current;
+    panTo(-(created.x + (created.width ?? 150) / 2) * s + cw / 2, -(created.y + 60) * s + ch / 2);
     return created;
   };
 
@@ -322,7 +399,6 @@ export function AnonymousWall() {
     }
   };
 
-  // ── Delete a note ──────────────────────────────────────────
   const handleDelete = useCallback(async (noteId: number) => {
     if (!userToken) return;
     try {
@@ -336,16 +412,12 @@ export function AnonymousWall() {
     }
   }, [userToken]);
 
-  // ── Edit a note ────────────────────────────────────────────
   const handleEdit = useCallback(async (noteId: number, text: string, tag: string) => {
     if (!userToken) return;
     try {
       const res = await fetch(`${API}/api/wall/notes/${noteId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-token": userToken,
-        },
+        headers: { "Content-Type": "application/json", "x-user-token": userToken },
         body: JSON.stringify({ text, tag }),
       });
       const updated = await res.json();
@@ -357,7 +429,6 @@ export function AnonymousWall() {
     }
   }, [userToken]);
 
-  // ── Heart a note ───────────────────────────────────────────
   const handleHeart = useCallback(async (noteId: number) => {
     try {
       await fetch(`${API}/api/wall/notes/${noteId}/heart`, { method: "POST" });
@@ -366,7 +437,6 @@ export function AnonymousWall() {
     }
   }, []);
 
-  // ── Reply to a note ────────────────────────────────────────
   const handleReply = useCallback(
     async (noteId: number, text: string, from: string, avatarId: string | null) => {
       const res = await fetch(`${API}/api/wall/notes/${noteId}/replies`, {
@@ -375,7 +445,6 @@ export function AnonymousWall() {
         body: JSON.stringify({ text, from, avatarId }),
       });
       const created = await res.json();
-      // Update note in list too
       setNotes((prev) =>
         prev.map((n) =>
           n.id === noteId ? { ...n, replies: [...n.replies, created] } : n
@@ -386,167 +455,130 @@ export function AnonymousWall() {
     []
   );
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--us-dark)",
-        fontFamily: "'Sarabun', sans-serif",
-        overflow: "hidden",
-      }}
-    >
-      {/* ── Top bar ─────────────────────────────────────────── */}
-      <div
-        style={{
-          flexShrink: 0,
-          background: "var(--us-dark)",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          padding: "0 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          height: 52,
-          zIndex: 30,
-          overflowX: "auto",
-        }}
+  // Shared submit panel content (used both desktop inline and mobile sheet)
+  const submitPanel = (
+    <div className="flex items-start gap-3">
+      {/* Avatar preview */}
+      <button
+        onClick={() => setShowAvatarPicker(true)}
+        title="เลือกอวตาร"
+        className={`rounded-full w-11 h-11 shrink-0 cursor-pointer flex items-center justify-center overflow-hidden mt-0.5 ${
+          avatar ? "border-2 border-us-orange bg-us-surface" : "border-2 border-dashed border-us-muted bg-us-surface"
+        }`}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#f9f4eb" }}>
-            โน้ตจากใจ
-          </span>
-          <span
-            style={{
-              fontFamily: "'Patrick Hand', cursive",
-              fontSize: 9,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              color: "rgba(249,244,235,0.3)",
-              display: "none",
-            }}
-            className="sm-inline"
-          >
+        {avatar ? <AvatarFace preset={avatar} size={44} /> : <Smile size={18} className="text-us-muted" strokeWidth={1.5} />}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <input
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          onBlur={(e) => saveName(e.target.value)}
+          placeholder="ชื่อ (ไม่บังคับ)"
+          maxLength={30}
+          className="w-full bg-us-surface border border-us-muted rounded px-3 py-1.5 text-[12px] outline-none text-us-text font-sans mb-2 focus:border-us-blue transition-colors"
+        />
+        <textarea
+          autoFocus
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+          }}
+          placeholder="เขียนสิ่งที่อยากให้ครอบครัวรู้..."
+          rows={2}
+          className="w-full bg-white border-2 border-us-dark rounded px-3 py-2 text-[14px] resize-none outline-none text-us-text font-sans"
+        />
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {TAGS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setSelectedTag(t)}
+              className={`rounded-full px-2.5 py-[3px] text-[11px] cursor-pointer transition-all duration-150 ${
+                selectedTag === t ? "bg-us-blue text-white border-none" : "bg-us-surface text-us-muted border border-us-muted"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        className="bg-us-orange text-white border-none rounded px-4 py-[10px] text-[13px] font-bold cursor-pointer flex items-center gap-1.5 mt-0.5 whitespace-nowrap hover:bg-orange-500 transition-colors"
+      >
+        ปล่อยโน้ต
+        <Send size={13} strokeWidth={2} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 flex flex-col bg-us-dark overflow-hidden font-sans">
+
+      {/* ── Desktop top bar (hidden on mobile) ───────────────── */}
+      <div className="hidden sm:flex shrink-0 items-center gap-2 px-5 h-[52px] bg-us-dark border-b border-white/8 z-30 overflow-x-auto">
+        {/* Title */}
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <span className="text-[15px] font-bold text-us-cream">โน้ตจากใจ</span>
+          <span className="font-[family-name:var(--font-patrick-hand)] text-[9px] tracking-[2px] uppercase text-us-cream/30">
             Anonymous Wall
           </span>
         </div>
 
-        <div
-          style={{
-            width: 3,
-            height: 18,
-            background: "var(--us-orange)",
-            borderRadius: 2,
-            flexShrink: 0,
-          }}
-        />
+        <div className="w-[3px] h-[18px] bg-us-orange rounded-sm shrink-0" />
 
         {/* Filter chips */}
-        <div style={{ display: "flex", gap: 5, overflowX: "auto", flexShrink: 1, scrollbarWidth: "none" }}>
+        <div className="flex gap-1.5 overflow-x-auto shrink-1" style={{ scrollbarWidth: "none" }}>
           {FILTERS.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              style={{
-                background:
-                  activeFilter === f ? "var(--us-orange)" : "rgba(255,255,255,0.08)",
-                color: activeFilter === f ? "#fff" : "rgba(249,244,235,0.6)",
-                border:
-                  activeFilter === f ? "none" : "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 14,
-                padding: "4px 10px",
-                fontSize: 11,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                transition: "all 0.15s",
-                fontFamily: "'Sarabun', sans-serif",
-              }}
+              className={`rounded-full px-3 py-1 text-[11px] whitespace-nowrap shrink-0 cursor-pointer transition-all duration-150 ${
+                activeFilter === f ? "bg-us-orange text-white border-none" : "bg-white/8 text-us-cream/60 border border-white/12"
+              }`}
             >
               {f}
             </button>
           ))}
         </div>
 
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
 
-        {/* Note count — hide label on very small screens */}
-        <div
-          style={{
-            color: "var(--us-orange)",
-            display: "flex",
-            alignItems: "baseline",
-            gap: 3,
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ fontSize: 18, fontWeight: 700 }}>{notes.length}</span>
-          <span style={{ fontSize: 9, opacity: 0.65 }}>ข้อความ</span>
+        <div className="flex items-baseline gap-[3px] shrink-0 text-us-orange">
+          <span className="text-[18px] font-bold">{notes.length}</span>
+          <span className="text-[9px] opacity-65">ข้อความ</span>
         </div>
 
-        {/* Avatar button */}
         <button
           onClick={() => setShowAvatarPicker(true)}
           title="เลือกอวตาร"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            border: avatar
-              ? "2px solid var(--us-orange)"
-              : "1px solid rgba(255,255,255,0.15)",
-            borderRadius: "50%",
-            width: 34,
-            height: 34,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            padding: 0,
-            overflow: "hidden",
-          }}
+          className={`rounded-full w-[34px] h-[34px] flex items-center justify-center shrink-0 overflow-hidden cursor-pointer transition-colors ${
+            avatar ? "border-2 border-us-orange bg-white/8" : "border border-white/15 bg-white/8"
+          }`}
         >
-          {avatar ? (
-            <AvatarFace preset={avatar} size={34} />
-          ) : (
-            <Smile size={15} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
-          )}
+          {avatar ? <AvatarFace preset={avatar} size={34} /> : <Smile size={15} className="text-us-cream/50" strokeWidth={1.5} />}
         </button>
 
-        {/* Note mode buttons */}
         {submitted ? (
-          <div style={{
-            background: "#6b6055", color: "#fff", borderRadius: 20,
-            padding: "6px 12px", fontSize: 12, fontWeight: 700,
-            fontFamily: "'Sarabun', sans-serif", display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
-          }}>
+          <div className="bg-us-muted text-white rounded-full px-3 py-[6px] text-[12px] font-bold flex items-center gap-1.5 shrink-0">
             <Check size={13} strokeWidth={2.5} /> ส่งแล้ว
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          <div className="flex gap-1.5 shrink-0">
             <button
               onClick={() => { setShowSubmit((s) => !s); setShowDrawing(false); }}
-              style={{
-                background: showSubmit ? "rgba(255,255,255,0.12)" : "var(--us-orange)",
-                color: "#fff", border: "none", borderRadius: 20,
-                padding: "6px 10px", fontSize: 12, fontWeight: 700,
-                cursor: "pointer", transition: "background 0.2s",
-                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
-                display: "flex", alignItems: "center", gap: 4,
-              }}
+              className={`rounded-full px-[10px] py-[6px] text-[12px] font-bold cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1 ${
+                showSubmit ? "bg-white/12 text-white" : "bg-us-orange text-white hover:bg-orange-500"
+              }`}
             >
               {showSubmit ? <><X size={12} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={12} strokeWidth={2} /> พิมพ์</>}
             </button>
             <button
               onClick={() => { setShowDrawing(true); setShowSubmit(false); }}
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                color: "#f9f4eb", border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 20, padding: "6px 10px", fontSize: 12, fontWeight: 700,
-                cursor: "pointer", transition: "background 0.2s",
-                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
-                display: "flex", alignItems: "center", gap: 4,
-              }}
+              className="bg-white/10 text-us-cream border border-white/20 rounded-full px-[10px] py-[6px] text-[12px] font-bold cursor-pointer whitespace-nowrap flex items-center gap-1 hover:bg-white/20 transition-colors"
             >
               <Pen size={12} strokeWidth={2} /> เขียน
             </button>
@@ -554,126 +586,14 @@ export function AnonymousWall() {
         )}
       </div>
 
-      {/* ── Submit panel ──────────────────────────────────────── */}
+      {/* ── Desktop submit panel ──────────────────────────────── */}
       {showSubmit && (
-        <div
-          style={{
-            flexShrink: 0,
-            background: "var(--us-bg)",
-            borderBottom: "2px solid rgba(30,58,79,0.6)",
-            padding: "12px 20px",
-            display: "flex",
-            gap: 12,
-            alignItems: "flex-start",
-            zIndex: 29,
-          }}
-        >
-          {/* Avatar preview in submit panel */}
-          <button
-            onClick={() => setShowAvatarPicker(true)}
-            title="เลือกอวตาร"
-            style={{
-              background: "var(--us-surface)",
-              border: avatar
-                ? "2px solid var(--us-orange)"
-                : "2px dashed var(--us-muted)",
-              borderRadius: "50%",
-              width: 44,
-              height: 44,
-              flexShrink: 0,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              overflow: "hidden",
-              marginTop: 2,
-            }}
-          >
-            {avatar ? (
-              <AvatarFace preset={avatar} size={44} />
-            ) : (
-              <Smile size={18} color="var(--us-muted)" strokeWidth={1.5} />
-            )}
-          </button>
-
-          <div style={{ flex: 1 }}>
-            <textarea
-              autoFocus
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              placeholder="เขียนสิ่งที่อยากให้ครอบครัวรู้..."
-              rows={2}
-              style={{
-                width: "100%",
-                background: "#fff",
-                border: "2px solid var(--us-dark)",
-                borderRadius: 4,
-                padding: "9px 13px",
-                fontFamily: "'Sarabun', sans-serif",
-                fontSize: 14,
-                resize: "none",
-                outline: "none",
-                color: "var(--us-text)",
-              }}
-            />
-            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-              {TAGS.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setSelectedTag(t)}
-                  style={{
-                    background:
-                      selectedTag === t ? "var(--us-blue)" : "var(--us-surface)",
-                    color: selectedTag === t ? "#fff" : "var(--us-muted)",
-                    border:
-                      selectedTag === t ? "none" : "1px solid var(--us-muted)",
-                    borderRadius: 12,
-                    padding: "3px 10px",
-                    fontFamily: "'Sarabun', sans-serif",
-                    fontSize: 11,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            style={{
-              background: "var(--us-orange)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              padding: "10px 18px",
-              fontFamily: "'Sarabun', sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              marginTop: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            ปล่อยโน้ต
-            <Send size={13} strokeWidth={2} />
-          </button>
+        <div className="hidden sm:block shrink-0 px-5 py-3 bg-us-bg border-b-2 border-us-dark/60 z-[29]">
+          {submitPanel}
         </div>
       )}
 
-      {/* ── Infinite canvas ───────────────────────────────────── */}
+      {/* ── Infinite canvas ──────────────────────────────────── */}
       <div
         ref={canvasRef}
         onMouseDown={onMouseDown}
@@ -683,89 +603,79 @@ export function AnonymousWall() {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onPointerUp}
-        style={{
-          flex: 1,
-          position: "relative",
-          overflow: "hidden",
-          cursor: "grab",
-          background: "var(--us-surface)",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-        }}
+        className="flex-1 relative overflow-hidden cursor-grab bg-us-surface select-none"
+        style={{ WebkitUserSelect: "none" }}
       >
-        {/* Loading state */}
+        {/* Skeleton notes while loading */}
         {loading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              color: "rgba(249,244,235,0.4)",
-              fontFamily: "'Sarabun', sans-serif",
-              fontSize: 13,
-            }}
-          >
-            <Loader2
-              size={16}
-              strokeWidth={2}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-            กำลังโหลด...
+          <div className="absolute inset-0 pointer-events-none">
+            {[
+              { x: "12%", y: "18%", w: 148, h: 130, r: -2.5 },
+              { x: "32%", y: "10%", w: 160, h: 115, r: 1.8 },
+              { x: "55%", y: "22%", w: 140, h: 140, r: -1.2 },
+              { x: "72%", y: "12%", w: 155, h: 120, r: 2.2 },
+              { x: "20%", y: "52%", w: 145, h: 125, r: 1.0 },
+              { x: "44%", y: "58%", w: 158, h: 118, r: -2.0 },
+              { x: "66%", y: "50%", w: 142, h: 132, r: 1.5 },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className="absolute rounded-sm overflow-hidden"
+                style={{
+                  left: s.x,
+                  top: s.y,
+                  width: s.w,
+                  height: s.h,
+                  transform: `rotate(${s.r}deg)`,
+                  animationDelay: `${i * 0.08}s`,
+                  background: i % 2 === 0 ? "#1e3a4f" : "#f0e9d8",
+                  opacity: 0.55,
+                }}
+              >
+                <div className="us-skeleton absolute inset-0" />
+                {/* pin */}
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white/20" />
+                {/* lines */}
+                <div className="px-3 pt-5 flex flex-col gap-2">
+                  <div className="us-skeleton h-2 w-12 rounded" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
+                  <div className="us-skeleton h-2.5 w-full rounded" style={{ animationDelay: `${i * 0.1 + 0.2}s` }} />
+                  <div className="us-skeleton h-2.5 w-4/5 rounded" style={{ animationDelay: `${i * 0.1 + 0.3}s` }} />
+                  <div className="us-skeleton h-2.5 w-3/5 rounded" style={{ animationDelay: `${i * 0.1 + 0.4}s` }} />
+                </div>
+              </div>
+            ))}
+            {/* Loading label */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-us-muted/60 text-[12px] font-[family-name:var(--font-patrick-hand)] tracking-[1px]">
+              <Loader2 size={13} strokeWidth={2} className="animate-spin" />
+              กำลังโหลดโน้ต...
+            </div>
           </div>
         )}
 
-        {/* Dot grid */}
-        <svg
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            opacity: 0.18,
-            pointerEvents: "none",
-          }}
-        >
+        {/* Dot grid — scales with zoom */}
+        <svg className="absolute inset-0 w-full h-full opacity-[0.18] pointer-events-none">
           <defs>
             <pattern
               id="us-dots"
-              x={offset.x % 28}
-              y={offset.y % 28}
-              width="28"
-              height="28"
+              x={offset.x % (28 * scale)}
+              y={offset.y % (28 * scale)}
+              width={28 * scale}
+              height={28 * scale}
               patternUnits="userSpaceOnUse"
             >
-              <circle cx="2" cy="2" r="1.2" fill="#6b6055" />
+              <circle cx={2 * scale} cy={2 * scale} r={1.2 * scale} fill="#6b6055" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#us-dots)" />
         </svg>
 
-        {/* Panned layer */}
+        {/* Panned + scaled layer — transform is dynamic JS so inline style is required */}
         <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            transform: `translate(${offset.x}px, ${offset.y}px)`,
-            willChange: "transform",
-          }}
+          className="absolute top-0 left-0 will-change-transform origin-top-left"
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
         >
           {/* Dashed string threads */}
-          <svg
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              overflow: "visible",
-              opacity: 0.2,
-              pointerEvents: "none",
-            }}
-          >
+          <svg className="absolute top-0 left-0 w-full h-full overflow-visible opacity-20 pointer-events-none">
             {visible.map((n) => (
               <line
                 key={n.id}
@@ -788,6 +698,7 @@ export function AnonymousWall() {
               resolvedAvatar={resolveAvatar(n.avatarId)}
               isOwner={userId !== null && n.userId === userId}
               isNew={n.id === newNoteId}
+              fetchIndex={fetchedIds.has(n.id) ? i : undefined}
               onExpand={() => handleNoteExpand(n)}
               onHeart={() => handleHeart(n.id)}
               onDelete={() => handleDelete(n.id)}
@@ -801,6 +712,7 @@ export function AnonymousWall() {
             note={expanded}
             resolvedAvatar={resolveAvatar(expanded.avatarId)}
             replyAvatar={avatar}
+            replyDisplayName={displayName.trim() || null}
             onClose={() => setExpanded(null)}
             onHeart={() => handleHeart(expanded.id)}
             onReply={(text, from, avatarId) =>
@@ -809,53 +721,171 @@ export function AnonymousWall() {
           />
         )}
 
-        {/* Hint */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 16,
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontFamily: "'Patrick Hand', cursive",
-            fontSize: 11,
-            color: "rgba(107,96,85,0.5)",
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
-            letterSpacing: 1,
-          }}
-        >
-          ลากเพื่อสำรวจ · กดโน้ตเพื่ออ่านและตอบกลับ
+        {/* ── Mobile floating right pill ── */}
+        <div className="sm:hidden absolute right-3 top-4 z-20 flex flex-col gap-2">
+          {/* Note count badge */}
+          <div className="flex flex-col items-center bg-us-dark/85 border border-white/10 rounded-2xl px-2 py-2.5 gap-[2px] backdrop-blur-sm">
+            <span className="text-[15px] font-bold text-us-orange leading-none">{notes.length}</span>
+            <span className="text-[8px] text-us-cream/40">โน้ต</span>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-white/8" />
+
+          {/* Filter */}
+          <button
+            onClick={() => { setShowMobileFilter((s) => !s); setShowMobileSubmit(false); }}
+            title="กรอง"
+            className={`w-10 h-10 rounded-2xl flex flex-col items-center justify-center gap-[3px] cursor-pointer transition-colors border ${
+              showMobileFilter || activeFilter !== "ทั้งหมด"
+                ? "bg-us-orange border-us-orange text-white"
+                : "bg-us-dark/85 border-white/10 text-us-cream/60 backdrop-blur-sm"
+            }`}
+          >
+            <SlidersHorizontal size={15} strokeWidth={2} />
+            {activeFilter !== "ทั้งหมด" && (
+              <span className="text-[7px] font-bold leading-none truncate max-w-[32px] text-center">{activeFilter}</span>
+            )}
+          </button>
+
+          {/* Type note */}
+          <button
+            onClick={() => { setShowMobileSubmit((s) => !s); setShowMobileFilter(false); setShowDrawing(false); }}
+            title="พิมพ์โน้ต"
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center cursor-pointer transition-colors border ${
+              showMobileSubmit
+                ? "bg-us-orange border-us-orange text-white"
+                : "bg-us-dark/85 border-white/10 text-us-cream/60 backdrop-blur-sm"
+            }`}
+          >
+            <Keyboard size={15} strokeWidth={2} />
+          </button>
+
+          {/* Draw note */}
+          <button
+            onClick={() => { setShowDrawing(true); setShowMobileSubmit(false); setShowMobileFilter(false); }}
+            title="เขียนด้วยมือ"
+            className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
+          >
+            <Pen size={15} strokeWidth={2} />
+          </button>
+
+          {/* Avatar */}
+          <button
+            onClick={() => setShowAvatarPicker(true)}
+            title="เลือกอวตาร"
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center cursor-pointer transition-colors border overflow-hidden ${
+              avatar ? "border-us-orange bg-us-dark/85" : "border-white/10 bg-us-dark/85 backdrop-blur-sm"
+            }`}
+          >
+            {avatar ? <AvatarFace preset={avatar} size={40} /> : <Smile size={15} className="text-us-cream/60" strokeWidth={1.5} />}
+          </button>
+
+          {/* Zoom in */}
+          <div className="w-full h-px bg-white/8" />
+          <button
+            onClick={() => applyZoom(scale * 1.3, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
+            title="ซูมเข้า"
+          >
+            <ZoomIn size={15} strokeWidth={2} />
+          </button>
+          {/* Zoom out */}
+          <button
+            onClick={() => applyZoom(scale * 0.75, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
+            title="ซูมออก"
+          >
+            <ZoomOut size={15} strokeWidth={2} />
+          </button>
+          {/* Zoom reset */}
+          <button
+            onClick={() => applyZoom(1, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/50 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm text-[9px] font-bold"
+            title="รีเซ็ต"
+          >
+            {Math.round(scale * 100)}%
+          </button>
         </div>
 
-        {/* Family CTA */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 16,
-            right: 20,
-            fontFamily: "'Sarabun', sans-serif",
-            fontSize: 12,
-            color: "rgba(47,89,122,0.65)",
-            pointerEvents: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <Users size={13} strokeWidth={1.5} color="rgba(47,89,122,0.65)" />
-          กดที่โน้ตเพื่อส่งกำลังใจ
+        {/* ── Mobile filter bottom sheet ── */}
+        {showMobileFilter && (
+          <div className="sm:hidden absolute bottom-0 left-0 right-0 z-30 bg-us-dark/95 border-t border-white/10 px-4 py-4 backdrop-blur-md">
+            <div className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-cream/40 uppercase tracking-[1.5px] mb-3">กรองตามหมวด</div>
+            <div className="flex flex-wrap gap-2">
+              {FILTERS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => { setActiveFilter(f); setShowMobileFilter(false); }}
+                  className={`rounded-full px-4 py-1.5 text-[12px] cursor-pointer transition-all ${
+                    activeFilter === f ? "bg-us-orange text-white" : "bg-white/8 text-us-cream/60 border border-white/12"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile submit bottom sheet ── */}
+        {showMobileSubmit && (
+          <div className="sm:hidden absolute bottom-0 left-0 right-0 z-30 bg-us-bg border-t-2 border-us-dark/60 px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-muted uppercase tracking-[1.5px]">ส่งโน้ต</span>
+              <button onClick={() => setShowMobileSubmit(false)} className="text-us-muted bg-transparent border-none cursor-pointer p-1">
+                <X size={16} strokeWidth={2} />
+              </button>
+            </div>
+            {submitted ? (
+              <div className="flex items-center justify-center gap-2 py-4 text-us-muted text-[14px] font-bold">
+                <Check size={16} strokeWidth={2.5} /> ส่งโน้ตแล้ว!
+              </div>
+            ) : submitPanel}
+          </div>
+        )}
+
+        {/* ── Desktop zoom controls ── */}
+        <div className="hidden sm:flex absolute bottom-4 right-4 flex-col gap-1 z-20">
+          <button
+            onClick={() => applyZoom(scale * 1.25, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/70 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10"
+            title="ซูมเข้า"
+          >
+            <ZoomIn size={14} strokeWidth={2} />
+          </button>
+          <button
+            onClick={() => applyZoom(scale * 0.8, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/70 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10"
+            title="ซูมออก"
+          >
+            <ZoomOut size={14} strokeWidth={2} />
+          </button>
+          <button
+            onClick={() => applyZoom(1, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/60 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10 font-bold text-[10px]"
+            title="รีเซ็ตซูม"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+        </div>
+
+        {/* Canvas hint */}
+        <div className="hidden sm:block absolute bottom-4 left-1/2 -translate-x-1/2 font-[family-name:var(--font-patrick-hand)] text-[11px] text-us-muted/50 pointer-events-none whitespace-nowrap tracking-[1px]">
+          ลากเพื่อสำรวจ · scroll เพื่อซูม · กดโน้ตเพื่ออ่าน
         </div>
       </div>
 
-      {/* ── Drawing modal ─────────────────────────────────────── */}
+      {/* ── Modals ───────────────────────────────────────────── */}
       {showDrawing && (
         <DrawingModal
           onClose={() => setShowDrawing(false)}
           onSubmit={handleDrawingSubmit}
+          displayName={displayName}
+          onNameChange={saveName}
         />
       )}
 
-      {/* ── Avatar picker modal ───────────────────────────────── */}
       {showAvatarPicker && (
         <AvatarPicker
           presets={AVATAR_PRESETS}

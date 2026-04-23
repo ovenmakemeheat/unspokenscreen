@@ -16,20 +16,77 @@ async function resolveUser(token: string | undefined) {
 }
 
 // ── POST /api/wall/session ─────────────────────────────────────
+const CreateSessionSchema = z.object({
+  name: z.string().max(30).optional(),
+});
+
 router.openapi(
   createRoute({
     method: "post",
     path: "/session",
     tags: ["Wall"],
     summary: "Create a new anonymous session",
+    request: {
+      body: {
+        content: { "application/json": { schema: CreateSessionSchema } },
+        required: false,
+      },
+    },
     responses: {
       201: { description: "Session token created" },
     },
   }),
   async (c) => {
-    const rows = await db.insert(wallUsers).values({}).returning();
+    let displayName: string | null = null;
+    try {
+      const body = CreateSessionSchema.parse(await c.req.json());
+      displayName = body.name?.trim() || null;
+    } catch {
+      // no body or invalid body — anonymous
+    }
+    const rows = await db.insert(wallUsers).values({ displayName }).returning();
     const user = rows[0]!;
-    return c.json({ token: user.token, userId: user.id }, 201);
+    return c.json({ token: user.token, userId: user.id, displayName: user.displayName ?? null }, 201);
+  },
+);
+
+// ── PATCH /api/wall/session ────────────────────────────────────
+const UpdateSessionSchema = z.object({
+  name: z.string().max(30),
+});
+
+router.openapi(
+  createRoute({
+    method: "patch",
+    path: "/session",
+    tags: ["Wall"],
+    summary: "Update display name for current session",
+    request: {
+      body: {
+        content: { "application/json": { schema: UpdateSessionSchema } },
+        required: true,
+      },
+    },
+    responses: {
+      200: { description: "Name updated" },
+      401: { description: "Invalid or missing session token" },
+    },
+  }),
+  async (c) => {
+    const token = c.req.header("x-user-token");
+    const user = await resolveUser(token);
+    if (!user) return c.json({ error: "Invalid or missing session token" }, 401);
+
+    const body = UpdateSessionSchema.parse(await c.req.json());
+    const displayName = body.name.trim() || null;
+
+    const [updated] = await db
+      .update(wallUsers)
+      .set({ displayName })
+      .where(eq(wallUsers.id, user.id))
+      .returning();
+
+    return c.json({ displayName: updated!.displayName ?? null });
   },
 );
 
@@ -46,8 +103,26 @@ router.openapi(
   }),
   async (c) => {
     const notes = await db
-      .select()
+      .select({
+        id: wallNotes.id,
+        text: wallNotes.text,
+        tag: wallNotes.tag,
+        hearts: wallNotes.hearts,
+        color: wallNotes.color,
+        textColor: wallNotes.textColor,
+        floatClass: wallNotes.floatClass,
+        width: wallNotes.width,
+        posX: wallNotes.posX,
+        posY: wallNotes.posY,
+        rotation: wallNotes.rotation,
+        delay: wallNotes.delay,
+        avatarId: wallNotes.avatarId,
+        imageData: wallNotes.imageData,
+        userId: wallNotes.userId,
+        displayName: wallUsers.displayName,
+      })
       .from(wallNotes)
+      .leftJoin(wallUsers, eq(wallNotes.userId, wallUsers.id))
       .orderBy(desc(wallNotes.createdAt));
 
     const replies = await db.select().from(wallReplies);
@@ -75,6 +150,7 @@ router.openapi(
       avatarId: n.avatarId,
       imageData: n.imageData,
       userId: n.userId,
+      displayName: n.displayName ?? null,
       replies: (replyMap.get(n.id) ?? []).map((r) => ({
         id: r.id,
         from: r.fromName,
@@ -164,6 +240,7 @@ router.openapi(
         avatarId: note.avatarId,
         imageData: note.imageData,
         userId: note.userId,
+        displayName: user.displayName ?? null,
         replies: [],
       },
       201,

@@ -56,6 +56,7 @@ export const wallUsers = pgTable("wall_users", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
   token: uuid("token").notNull().unique().defaultRandom(),
   avatarId: text("avatar_id"),
+  displayName: text("display_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { X, Trash2, Eraser, Pen, Upload, Send } from "lucide-react";
+import { X, Trash2, Eraser, Upload, Send } from "lucide-react";
 
 const COLORS = ["#1a1a1a", "#562634", "#2f597a", "#1e3a4f", "#ff751f", "#6b6055"];
 const BRUSHES = [2, 4, 7, 12];
@@ -9,9 +9,11 @@ const BRUSHES = [2, 4, 7, 12];
 type Props = {
   onClose: () => void;
   onSubmit: (imageData: string) => void;
+  displayName: string;
+  onNameChange: (name: string) => void;
 };
 
-export function DrawingModal({ onClose, onSubmit }: Props) {
+export function DrawingModal({ onClose, onSubmit, displayName, onNameChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [color, setColor] = useState("#1a1a1a");
   const [brushSize, setBrushSize] = useState(4);
@@ -21,7 +23,6 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Init canvas background
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -102,7 +103,6 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
         const ctx = canvas.getContext("2d")!;
         ctx.fillStyle = "#fef4c0";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // Fit image into canvas maintaining aspect ratio
         const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
         const w = img.width * scale;
         const h = img.height * scale;
@@ -122,55 +122,30 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
   };
 
   return (
+    /* Backdrop */
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(0,0,0,0.6)",
-        backdropFilter: "blur(4px)",
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm"
+      style={{ background: "rgba(0,0,0,0.6)" }}
       onClick={onClose}
     >
+      {/* Modal */}
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--us-bg)",
-          borderRadius: 12,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 0,
-          width: "min(520px, 95vw)",
-          overflow: "hidden",
-        }}
+        className="bg-us-bg rounded-xl shadow-2xl flex flex-col overflow-hidden w-[min(520px,95vw)]"
       >
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px",
-            background: "var(--us-dark)",
-          }}
-        >
-          <span style={{ fontFamily: "'Sarabun', sans-serif", fontSize: 14, fontWeight: 700, color: "#f9f4eb" }}>
-            ✍️ เขียนด้วยมือ
-          </span>
+        <div className="flex items-center justify-between px-4 py-3 bg-us-dark">
+          <span className="text-[14px] font-bold text-us-cream">✍️ เขียนด้วยมือ</span>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(249,244,235,0.5)", display: "flex", padding: 4 }}
+            className="bg-transparent border-none cursor-pointer text-us-cream/50 flex p-1 hover:text-us-cream/80 transition-colors"
           >
             <X size={16} strokeWidth={2} />
           </button>
         </div>
 
-        {/* Canvas */}
-        <div style={{ position: "relative", background: "#e8e0cc", lineHeight: 0 }}>
+        {/* Canvas area */}
+        <div className="relative bg-[#e8e0cc] leading-none">
           <canvas
             ref={canvasRef}
             width={520}
@@ -182,119 +157,70 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
             onTouchStart={startDraw}
             onTouchMove={draw}
             onTouchEnd={endDraw}
-            style={{
-              width: "100%",
-              height: "auto",
-              display: "block",
-              cursor: erasing ? "cell" : "crosshair",
-              touchAction: "none",
-            }}
+            className={`w-full h-auto block ${erasing ? "cursor-cell" : "cursor-crosshair"}`}
+            style={{ touchAction: "none" }}
           />
           {!hasStrokes && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-                fontFamily: "'Lora', Georgia, serif",
-                fontStyle: "italic",
-                fontSize: 15,
-                color: "rgba(107,96,85,0.4)",
-              }}
-            >
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none font-[family-name:var(--font-lora)] italic text-[15px] text-us-muted/40">
               เขียนสิ่งที่อยากบอก...
             </div>
           )}
         </div>
 
         {/* Toolbar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "10px 14px",
-            background: "var(--us-surface)",
-            borderTop: "1px solid rgba(0,0,0,0.08)",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="flex items-center gap-3 px-3.5 py-2.5 bg-us-surface border-t border-black/8 flex-wrap">
           {/* Color swatches */}
-          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          <div className="flex gap-1.5 items-center">
             {COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => { setColor(c); setErasing(false); }}
+                className="w-[18px] h-[18px] rounded-full cursor-pointer p-0 shrink-0 transition-[outline]"
                 style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: "50%",
                   background: c,
                   border: color === c && !erasing ? "2px solid var(--us-orange)" : "2px solid transparent",
                   outline: color === c && !erasing ? "1px solid rgba(255,255,255,0.6)" : "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  flexShrink: 0,
                 }}
               />
             ))}
           </div>
 
           {/* Divider */}
-          <div style={{ width: 1, height: 20, background: "rgba(0,0,0,0.12)", flexShrink: 0 }} />
+          <div className="w-px h-5 bg-black/12 shrink-0" />
 
           {/* Brush sizes */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div className="flex gap-1.5 items-center">
             {BRUSHES.map((s) => (
               <button
                 key={s}
                 onClick={() => { setBrushSize(s); setErasing(false); }}
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  background: brushSize === s && !erasing ? "var(--us-dark)" : "rgba(0,0,0,0.1)",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 0,
-                }}
+                className="w-6 h-6 rounded-full border-none cursor-pointer flex items-center justify-center p-0"
+                style={{ background: brushSize === s && !erasing ? "var(--us-dark)" : "rgba(0,0,0,0.1)" }}
               >
-                <div style={{
-                  width: Math.min(s * 1.5, 14),
-                  height: Math.min(s * 1.5, 14),
-                  borderRadius: "50%",
-                  background: brushSize === s && !erasing ? "#f9f4eb" : "#1a1a1a",
-                }} />
+                <div
+                  className="rounded-full"
+                  style={{
+                    width: Math.min(s * 1.5, 14),
+                    height: Math.min(s * 1.5, 14),
+                    background: brushSize === s && !erasing ? "#f9f4eb" : "#1a1a1a",
+                  }}
+                />
               </button>
             ))}
           </div>
 
           {/* Divider */}
-          <div style={{ width: 1, height: 20, background: "rgba(0,0,0,0.12)", flexShrink: 0 }} />
+          <div className="w-px h-5 bg-black/12 shrink-0" />
 
-          {/* Tools */}
+          {/* Tool buttons */}
           <button
             onClick={() => setErasing((e) => !e)}
             title="ยางลบ"
-            style={{
-              background: erasing ? "var(--us-dark)" : "none",
-              border: erasing ? "none" : "1px solid rgba(0,0,0,0.15)",
-              borderRadius: 6,
-              padding: "4px 8px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              color: erasing ? "#f9f4eb" : "var(--us-muted)",
-              fontSize: 11,
-              fontFamily: "'Sarabun', sans-serif",
-            }}
+            className={`border rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 text-[11px] transition-colors ${
+              erasing
+                ? "bg-us-dark border-transparent text-us-cream"
+                : "bg-transparent border-black/15 text-us-muted"
+            }`}
           >
             <Eraser size={13} strokeWidth={2} />
           </button>
@@ -302,19 +228,7 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
           <button
             onClick={clearCanvas}
             title="ล้าง"
-            style={{
-              background: "none",
-              border: "1px solid rgba(0,0,0,0.15)",
-              borderRadius: 6,
-              padding: "4px 8px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              color: "var(--us-muted)",
-              fontSize: 11,
-              fontFamily: "'Sarabun', sans-serif",
-            }}
+            className="bg-transparent border border-black/15 rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 text-us-muted text-[11px] hover:bg-black/5 transition-colors"
           >
             <Trash2 size={13} strokeWidth={2} />
           </button>
@@ -322,46 +236,34 @@ export function DrawingModal({ onClose, onSubmit }: Props) {
           <button
             onClick={() => fileRef.current?.click()}
             title="อัปโหลดรูป"
-            style={{
-              background: "none",
-              border: "1px solid rgba(0,0,0,0.15)",
-              borderRadius: 6,
-              padding: "4px 8px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              color: "var(--us-muted)",
-              fontSize: 11,
-              fontFamily: "'Sarabun', sans-serif",
-            }}
+            className="bg-transparent border border-black/15 rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 text-us-muted text-[11px] hover:bg-black/5 transition-colors"
           >
             <Upload size={13} strokeWidth={2} />
             <span>รูปภาพ</span>
           </button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
+
+          {/* Name input */}
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="ชื่อ (ไม่บังคับ)"
+            maxLength={30}
+            className="bg-us-bg border border-black/15 rounded-md px-2 py-[5px] text-[11px] text-us-text outline-none w-[120px] focus:border-us-blue transition-colors"
+          />
 
           {/* Submit */}
           <button
             onClick={handleSubmit}
             disabled={!hasStrokes}
-            style={{
-              background: hasStrokes ? "var(--us-orange)" : "rgba(0,0,0,0.1)",
-              color: hasStrokes ? "#fff" : "rgba(0,0,0,0.3)",
-              border: "none",
-              borderRadius: 8,
-              padding: "7px 16px",
-              fontFamily: "'Sarabun', sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: hasStrokes ? "pointer" : "default",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              transition: "background 0.2s",
-            }}
+            className={`rounded-lg px-4 py-[7px] text-[13px] font-bold flex items-center gap-1.5 transition-colors ${
+              hasStrokes
+                ? "bg-us-orange text-white cursor-pointer hover:bg-orange-500"
+                : "bg-black/10 text-black/30 cursor-default"
+            }`}
           >
             ปล่อยโน้ต
             <Send size={13} strokeWidth={2} />

@@ -7,9 +7,7 @@ type AvatarFaceProps = {
   size?: number;
 };
 
-// Simple SVG face — consistent style across all presets, differentiated by color
 export function AvatarFace({ preset, size = 36 }: AvatarFaceProps) {
-  const r = size / 2;
   return (
     <svg
       width={size}
@@ -17,20 +15,13 @@ export function AvatarFace({ preset, size = 36 }: AvatarFaceProps) {
       viewBox="0 0 36 36"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ flexShrink: 0, borderRadius: "50%", display: "block" }}
+      className="shrink-0 rounded-full block"
     >
-      {/* Face circle */}
       <circle cx="18" cy="18" r="18" fill={preset.bg} />
-
-      {/* Hair band / top shape */}
       <ellipse cx="18" cy="8" rx="9" ry="6" fill={preset.fg} opacity="0.85" />
       <rect x="9" y="8" width="18" height="5" fill={preset.bg} />
-
-      {/* Eyes */}
       <circle cx="13.5" cy="17" r="1.8" fill={preset.fg} />
       <circle cx="22.5" cy="17" r="1.8" fill={preset.fg} />
-
-      {/* Smile */}
       <path
         d="M13 22 Q18 26.5 23 22"
         stroke={preset.fg}
@@ -38,8 +29,6 @@ export function AvatarFace({ preset, size = 36 }: AvatarFaceProps) {
         strokeLinecap="round"
         fill="none"
       />
-
-      {/* Cheeks */}
       <circle cx="11" cy="21" r="2.5" fill={preset.fg} opacity="0.18" />
       <circle cx="25" cy="21" r="2.5" fill={preset.fg} opacity="0.18" />
     </svg>
@@ -53,135 +42,53 @@ type AvatarPickerProps = {
   onClose: () => void;
 };
 
-export function AvatarPicker({
-  presets,
-  selected,
-  onSelect,
-  onClose,
-}: AvatarPickerProps) {
+export function AvatarPicker({ presets, selected, onSelect, onClose }: AvatarPickerProps) {
   return (
+    /* Backdrop */
     <div
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(30,58,79,0.55)",
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backdropFilter: "blur(4px)",
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm"
+      style={{ background: "rgba(30,58,79,0.55)" }}
     >
+      {/* Panel */}
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--us-bg)",
-          borderRadius: 12,
-          padding: "24px 24px 20px",
-          width: 340,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-        }}
+        className="bg-us-bg rounded-xl px-6 pt-6 pb-5 w-[min(340px,92vw)] shadow-2xl"
       >
-        <div
-          style={{
-            fontFamily: "'Sarabun', sans-serif",
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--us-dark)",
-            marginBottom: 4,
-          }}
-        >
-          เลือกอวตารของคุณ
-        </div>
-        <div
-          style={{
-            fontFamily: "'Sarabun', sans-serif",
-            fontSize: 12,
-            color: "var(--us-muted)",
-            marginBottom: 18,
-          }}
-        >
+        <p className="text-[15px] font-bold text-us-dark mb-1">เลือกอวตารของคุณ</p>
+        <p className="text-[12px] text-us-muted mb-[18px]">
           อวตารจะแสดงบนโน้ตที่คุณส่ง (ยังไม่ระบุตัวตน)
-        </div>
+        </p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-          }}
-        >
+        <div className="grid grid-cols-4 gap-3">
           {presets.map((p) => (
             <button
               key={p.id}
               onClick={() => onSelect(p)}
+              className="bg-transparent rounded-[10px] p-1.5 cursor-pointer flex flex-col items-center gap-1.5 outline-none transition-[border-color] duration-150"
               style={{
-                background: "none",
                 border: `2.5px solid ${selected?.id === p.id ? "var(--us-orange)" : "transparent"}`,
-                borderRadius: 10,
-                padding: 6,
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 5,
-                transition: "border-color 0.15s",
-                outline: "none",
               }}
             >
               <AvatarFace preset={p} size={48} />
-              <span
-                style={{
-                  fontFamily: "'Sarabun', sans-serif",
-                  fontSize: 10,
-                  color: "var(--us-muted)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {p.label}
-              </span>
+              <span className="text-[10px] text-us-muted whitespace-nowrap">{p.label}</span>
             </button>
           ))}
         </div>
 
-        <div
-          style={{
-            marginTop: 18,
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 8,
-          }}
-        >
+        <div className="mt-[18px] flex justify-end gap-2">
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "1px solid var(--us-muted)",
-              borderRadius: 8,
-              padding: "7px 16px",
-              fontFamily: "'Sarabun', sans-serif",
-              fontSize: 12,
-              color: "var(--us-muted)",
-              cursor: "pointer",
-            }}
+            className="bg-transparent border border-us-muted rounded-lg px-4 py-[7px] text-[12px] text-us-muted cursor-pointer hover:bg-black/5 transition-colors"
           >
             ยกเลิก
           </button>
           <button
             onClick={onClose}
             disabled={!selected}
-            style={{
-              background: selected ? "var(--us-orange)" : "#ccc",
-              border: "none",
-              borderRadius: 8,
-              padding: "7px 18px",
-              fontFamily: "'Sarabun', sans-serif",
-              fontSize: 12,
-              fontWeight: 700,
-              color: "#fff",
-              cursor: selected ? "pointer" : "not-allowed",
-            }}
+            className={`border-none rounded-lg px-[18px] py-[7px] text-[12px] font-bold text-white transition-colors ${
+              selected ? "bg-us-orange cursor-pointer hover:bg-orange-500" : "bg-[#ccc] cursor-not-allowed"
+            }`}
           >
             เลือก
           </button>
