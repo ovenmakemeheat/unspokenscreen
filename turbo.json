@@ -10,7 +10,7 @@
         "DATABASE_URL",
         "PUBLIC_SUPABASE_URL",
         "PUBLIC_SUPABASE_ANON_KEY",
-        "CORS_ORIGIN",
+        "PUBLIC_CORS_ORIGIN",
         "NODE_ENV",
         "NEXT_PUBLIC_SERVER_URL"
       ]

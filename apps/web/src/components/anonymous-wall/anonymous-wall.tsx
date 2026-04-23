@@ -19,7 +19,7 @@ import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
 import { DrawingModal } from "./drawing-modal";
 import { env } from "@unspokenscreen/env/web";
 
-const API = env.NEXT_PUBLIC_SERVER_URL.replace(/\/$/, "");
+const API = env.NEXT_PUBLIC_SERVER_URL;
 
 const FILTERS = ["ทั้งหมด", "ครอบครัว", "ความเครียด", "ความฝัน", "ขอบคุณ"];
 const TAGS = FILTERS.slice(1);

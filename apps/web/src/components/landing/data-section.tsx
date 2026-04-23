@@ -46,7 +46,7 @@ type WordCloudQuestion = {
   count: number;
 };
 
-const API = env.NEXT_PUBLIC_SERVER_URL.replace(/\/$/, "");
+const API = env.NEXT_PUBLIC_SERVER_URL;
 
 // ── Animated pressure bar ─────────────────────────────────────
 function AnimatedBar({
@@ -67,15 +67,22 @@ function AnimatedBar({
   suffix?: string;
 }) {
   const scaledTarget = Math.round((value / max) * 1000);
-  const [ref, scaledWidth] = useCountUp(scaledTarget, { duration: 900, threshold: 0.3, delay });
+  const [ref, scaledWidth] = useCountUp(scaledTarget, {
+    duration: 900,
+    threshold: 0.3,
+    delay,
+  });
   const width = scaledWidth / 10;
 
   return (
     <div ref={ref} className="mb-3.5">
       <div className="flex justify-between mb-1.5 gap-2">
-        <span className="text-[13px] text-us-dark leading-snug flex-1">{label}</span>
+        <span className="text-[13px] text-us-dark leading-snug flex-1">
+          {label}
+        </span>
         <span className={`text-[13px] font-bold shrink-0 ${textClass}`}>
-          {value.toFixed(1)}{suffix}
+          {value.toFixed(1)}
+          {suffix}
         </span>
       </div>
       <div className="h-2 bg-us-blue/10 rounded-full overflow-hidden">
@@ -89,7 +96,13 @@ function AnimatedBar({
 }
 
 // ── Distribution bar chart (1–5 scale) ───────────────────────
-function DistributionChart({ dist, avg }: { dist: Record<string, number>; avg: number }) {
+function DistributionChart({
+  dist,
+  avg,
+}: {
+  dist: Record<string, number>;
+  avg: number;
+}) {
   const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
   const max = Math.max(...Object.values(dist), 1);
   return (
@@ -143,22 +156,30 @@ function ChoiceChart({ question }: { question: ChoiceQuestion }) {
         {shown.map((c, i) => {
           const pct = Math.round((c.count / question.total) * 100);
           const barW = (c.count / max) * 100;
-          const [bgClass, textClass] = CHOICE_COLORS[i % CHOICE_COLORS.length].split(" ");
+          const [bgClass, textClass] =
+            CHOICE_COLORS[i % CHOICE_COLORS.length].split(" ");
           return (
             <div key={c.label}>
               <div className="flex justify-between mb-0.5 gap-2">
                 <span className="text-[11px] text-us-dark leading-snug flex-1">
                   {c.label.length > 55 ? c.label.slice(0, 52) + "…" : c.label}
                 </span>
-                <span className={`text-[11px] font-bold shrink-0 ${textClass}`}>{pct}%</span>
+                <span className={`text-[11px] font-bold shrink-0 ${textClass}`}>
+                  {pct}%
+                </span>
               </div>
               <div className="h-1.5 bg-us-blue/8 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${bgClass}`} style={{ width: `${barW}%` }} />
+                <div
+                  className={`h-full rounded-full ${bgClass}`}
+                  style={{ width: `${barW}%` }}
+                />
               </div>
             </div>
           );
         })}
-        <p className="text-[10px] text-us-muted text-right mt-0.5">{question.total} คำตอบ</p>
+        <p className="text-[10px] text-us-muted text-right mt-0.5">
+          {question.total} คำตอบ
+        </p>
       </div>
     </div>
   );
@@ -182,7 +203,8 @@ function WordCloudCard({ question }: { question: WordCloudQuestion }) {
         <div className="h-32.5 flex flex-col items-center justify-center gap-2 bg-us-blue/4 rounded-md border-2 border-dashed border-us-blue/15">
           <ImageIcon size={24} color="rgba(47,89,122,0.3)" strokeWidth={1.5} />
           <span className="text-[11px] text-us-muted text-center">
-            Word Cloud<br />
+            Word Cloud
+            <br />
             <span className="opacity-60">{question.count} คำตอบ</span>
           </span>
         </div>
@@ -196,7 +218,9 @@ export function DataSection() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [scaleQuestions, setScaleQuestions] = useState<ScaleQuestion[]>([]);
   const [choiceQuestions, setChoiceQuestions] = useState<ChoiceQuestion[]>([]);
-  const [wordcloudQuestions, setWordcloudQuestions] = useState<WordCloudQuestion[]>([]);
+  const [wordcloudQuestions, setWordcloudQuestions] = useState<
+    WordCloudQuestion[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -212,34 +236,84 @@ export function DataSection() {
         setScaleQuestions(sc);
         setChoiceQuestions(ch);
         setWordcloudQuestions(
-          (op as Array<{ id: string; questionTh: string; wordcloudImageUrl: string | null; count: number }>)
-            .filter((q) => q.id === "a9" || q.id === "camp")
+          (
+            op as Array<{
+              id: string;
+              questionTh: string;
+              wordcloudImageUrl: string | null;
+              count: number;
+            }>
+          ).filter((q) => q.id === "a9" || q.id === "camp"),
         );
         setLoading(false);
       })
-      .catch(() => { setError(true); setLoading(false); });
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
 
   const pressureStats = summary
     ? [
-        { label: "ครอบครัวคาดหวังเกรดสูง", value: summary.keyStats.avgGradeExpectation, textClass: "text-us-orange", bgClass: "bg-us-orange" },
-        { label: "กลัวบอกความจริงกับที่บ้าน", value: summary.keyStats.avgFearOfTruth, textClass: "text-us-burg", bgClass: "bg-us-burg" },
-        { label: "Self-worth ลดเมื่อผลเรียนแย่", value: summary.keyStats.avgSelfWorthImpact, textClass: "text-us-burg", bgClass: "bg-us-burg" },
-        { label: "ความเครียดส่งผลต่อชีวิต", value: summary.keyStats.avgStressImpact, textClass: "text-us-orange", bgClass: "bg-us-orange" },
-        { label: "รู้สึกสูญเสียความเป็นตัวเอง", value: summary.keyStats.avgLostIdentity, textClass: "text-us-blue", bgClass: "bg-us-blue" },
-        { label: "ครอบครัวไม่ใช่พื้นที่ปลอดภัย", value: summary.keyStats.avgNotSafeSpace, textClass: "text-us-blue", bgClass: "bg-us-blue" },
-        { label: "รู้สึกโดดเดี่ยว", value: summary.keyStats.avgLoneliness, textClass: "text-us-burg", bgClass: "bg-us-burg" },
-        { label: "รักมีเงื่อนไข (เมื่อสำเร็จ)", value: summary.keyStats.avgConditionalLove, textClass: "text-us-orange", bgClass: "bg-us-orange" },
+        {
+          label: "ครอบครัวคาดหวังเกรดสูง",
+          value: summary.keyStats.avgGradeExpectation,
+          textClass: "text-us-orange",
+          bgClass: "bg-us-orange",
+        },
+        {
+          label: "กลัวบอกความจริงกับที่บ้าน",
+          value: summary.keyStats.avgFearOfTruth,
+          textClass: "text-us-burg",
+          bgClass: "bg-us-burg",
+        },
+        {
+          label: "Self-worth ลดเมื่อผลเรียนแย่",
+          value: summary.keyStats.avgSelfWorthImpact,
+          textClass: "text-us-burg",
+          bgClass: "bg-us-burg",
+        },
+        {
+          label: "ความเครียดส่งผลต่อชีวิต",
+          value: summary.keyStats.avgStressImpact,
+          textClass: "text-us-orange",
+          bgClass: "bg-us-orange",
+        },
+        {
+          label: "รู้สึกสูญเสียความเป็นตัวเอง",
+          value: summary.keyStats.avgLostIdentity,
+          textClass: "text-us-blue",
+          bgClass: "bg-us-blue",
+        },
+        {
+          label: "ครอบครัวไม่ใช่พื้นที่ปลอดภัย",
+          value: summary.keyStats.avgNotSafeSpace,
+          textClass: "text-us-blue",
+          bgClass: "bg-us-blue",
+        },
+        {
+          label: "รู้สึกโดดเดี่ยว",
+          value: summary.keyStats.avgLoneliness,
+          textClass: "text-us-burg",
+          bgClass: "bg-us-burg",
+        },
+        {
+          label: "รักมีเงื่อนไข (เมื่อสำเร็จ)",
+          value: summary.keyStats.avgConditionalLove,
+          textClass: "text-us-orange",
+          bgClass: "bg-us-orange",
+        },
       ]
     : [];
 
   const detailScaleIds = ["a3", "b1", "b2", "c5", "c7"];
-  const detailScales = scaleQuestions.filter((q) => detailScaleIds.includes(q.id));
+  const detailScales = scaleQuestions.filter((q) =>
+    detailScaleIds.includes(q.id),
+  );
 
   return (
     <section id="data" className="bg-us-surface py-20 px-10">
       <div className="max-w-240 mx-auto">
-
         {/* Header */}
         <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
           ข้อมูลและหลักฐานเชิงประจักษ์
@@ -257,7 +331,8 @@ export function DataSection() {
 
         {error && (
           <div className="bg-us-burg/6 border border-us-burg/20 rounded-lg px-4.5 py-3.5 text-[13px] text-us-burg mb-10">
-            ไม่สามารถโหลดข้อมูลจาก API ได้ — ตรวจสอบว่า server กำลังรันอยู่ที่ {API}
+            ไม่สามารถโหลดข้อมูลจาก API ได้ — ตรวจสอบว่า server กำลังรันอยู่ที่{" "}
+            {API}
           </div>
         )}
 
@@ -268,13 +343,17 @@ export function DataSection() {
               <div className="text-[clamp(36px,5vw,52px)] font-bold text-us-orange leading-none">
                 {summary.totalResponses}
               </div>
-              <p className="text-[13px] text-us-cream/60 mt-1">ผู้ตอบแบบสอบถาม</p>
+              <p className="text-[13px] text-us-cream/60 mt-1">
+                ผู้ตอบแบบสอบถาม
+              </p>
             </div>
             <div className="w-px h-12 bg-white/10 shrink-0" />
             <div className="flex gap-4 flex-wrap">
               {Object.entries(summary.yearBreakdown).map(([year, count]) => (
                 <div key={year} className="text-center">
-                  <div className="text-[20px] font-bold text-us-cream">{count}</div>
+                  <div className="text-[20px] font-bold text-us-cream">
+                    {count}
+                  </div>
                   <div className="text-[11px] text-us-cream/45">{year}</div>
                 </div>
               ))}
@@ -311,7 +390,10 @@ export function DataSection() {
             </p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
               {detailScales.map((q) => (
-                <div key={q.id} className="bg-white rounded-xl px-4 py-4.5 shadow-sm">
+                <div
+                  key={q.id}
+                  className="bg-white rounded-xl px-4 py-4.5 shadow-sm"
+                >
                   <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
                     {q.questionTh}
                   </p>
@@ -349,7 +431,6 @@ export function DataSection() {
             </div>
           </div>
         )}
-
       </div>
     </section>
   );
