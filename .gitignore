@@ -51,3 +51,5 @@ tmp
 temp
 
 pass.txt
+.vercel
+.env*.local
