@@ -46,7 +46,7 @@ type WordCloudQuestion = {
   count: number;
 };
 
-const API = env.NEXT_PUBLIC_SERVER_URL;
+const API = env.NEXT_PUBLIC_SERVER_URL.replace(/\/$/, "");
 
 // ── Animated pressure bar ─────────────────────────────────────
 function AnimatedBar({
