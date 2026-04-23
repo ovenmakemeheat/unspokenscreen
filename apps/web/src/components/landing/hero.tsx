@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import type { Route } from "next";
+import { NAV_LINKS } from "./nav-links";
 
 const QUOTES = [
   "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
@@ -14,166 +16,103 @@ const QUOTES = [
 export function Hero() {
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setVisible(false);
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setQuoteIdx((i) => (i + 1) % QUOTES.length);
         setVisible(true);
       }, 400);
     }, 3800);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   return (
-    <section
-      id="hero"
-      style={{
-        minHeight: "100vh",
-        background: "var(--us-dark)",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <section id="hero" className="min-h-screen bg-us-dark flex flex-col relative overflow-hidden">
       {/* Nav */}
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 40px",
-          height: 60,
-          background: "var(--us-blue)",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: 15,
-            fontWeight: 700,
-            color: "#f9f4eb",
-            letterSpacing: 0.3,
-          }}
-        >
+      <nav className="flex items-center justify-between px-5 sm:px-10 h-15 bg-us-blue shrink-0">
+        <span className="text-us-cream text-[15px] font-bold tracking-[0.3px]">
           Unspoken Screen
         </span>
-        <div style={{ display: "flex", gap: 28 }}>
-          {[
-            ["ปัญหา", "#problem"],
-            ["เสียงจากใจ", "#voices"],
-            ["ข้อมูล", "#data"],
-            ["กำแพงนิรนาม", "/wall"],
-          ].map(([label, href]) => (
+
+        {/* Desktop nav links */}
+        <div className="hidden sm:flex gap-7">
+          {NAV_LINKS.map(([label, href]) => (
             <Link
               key={label}
               href={href}
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 13,
-                color: "rgba(249,244,235,0.8)",
-                textDecoration: "none",
-                transition: "color 0.15s",
-              }}
+              className="text-us-cream/80 text-[13px] no-underline hover:text-us-cream transition-colors duration-150"
             >
               {label}
             </Link>
           ))}
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="sm:hidden text-us-cream/80 p-1"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
+        </button>
       </nav>
 
-      {/* Hero body */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          padding: "80px 40px 60px",
-          maxWidth: 760,
-          margin: "0 auto",
-          width: "100%",
-        }}
-      >
-        <div
-          style={{
-            fontFamily: "var(--font-patrick-hand), cursive",
-            fontSize: 11,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            color: "var(--us-orange)",
-            marginBottom: 16,
-          }}
-        >
-          หน้าจอที่อยากให้ครอบครัวได้ยิน
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className="sm:hidden bg-us-blue/95 flex flex-col px-5 py-4 gap-4 shrink-0 z-20">
+          {NAV_LINKS.map(([label, href]) => (
+            <Link
+              key={label}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              className="text-us-cream/80 text-[14px] no-underline hover:text-us-cream transition-colors duration-150"
+            >
+              {label}
+            </Link>
+          ))}
         </div>
+      )}
 
-        <h1
-          style={{
-            fontSize: "clamp(40px, 7vw, 72px)",
-            fontWeight: 700,
-            color: "#f9f4eb",
-            lineHeight: 1.12,
-            marginBottom: 20,
-            fontFamily: "var(--font-sarabun), sans-serif",
-          }}
-        >
-          The<br />Unspoken<br />Screen
+      {/* Hero body */}
+      <div className="flex-1 flex flex-col items-start justify-center px-5 sm:px-10 pt-12 sm:pt-20 pb-10 sm:pb-16 max-w-190 mx-auto w-full">
+        {/* Eyebrow */}
+        <p className="text-us-orange text-[10px] sm:text-[11px] tracking-[3px] sm:tracking-[4px] uppercase mb-4 font-semibold">
+          หน้าจอที่อยากให้ครอบครัวเห็น
+        </p>
+
+        <h1 className="text-[clamp(36px,8vw,72px)] font-bold text-us-cream leading-[1.12] mb-5">
+          The
+          <br />
+          Unspoken
+          <br />
+          Screen
         </h1>
 
         {/* Rotating quote */}
         <div
-          style={{
-            fontFamily: "var(--font-lora), Georgia, serif",
-            fontStyle: "italic",
-            fontSize: "clamp(14px, 2vw, 17px)",
-            color: "rgba(249,244,235,0.7)",
-            lineHeight: 1.8,
-            marginBottom: 36,
-            minHeight: 52,
-            borderLeft: "3px solid var(--us-burg)",
-            paddingLeft: 18,
-            transition: "opacity 0.4s",
-            opacity: visible ? 1 : 0,
-          }}
+          className="text-us-cream/70 text-[clamp(13px,2.5vw,17px)] leading-[1.8] mb-8 sm:mb-9 min-h-13 italic border-l-2 border-us-orange/50 pl-4 transition-opacity duration-300"
+          style={{ opacity: visible ? 1 : 0 }}
         >
           &ldquo;{QUOTES[quoteIdx]}&rdquo;
         </div>
 
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <div className="flex gap-3 flex-wrap">
           <Link
             href="#problem"
-            style={{
-              background: "var(--us-orange)",
-              color: "#fff",
-              borderRadius: 28,
-              padding: "13px 30px",
-              fontFamily: "var(--font-sarabun), sans-serif",
-              fontSize: 15,
-              fontWeight: 700,
-              textDecoration: "none",
-              transition: "background 0.2s",
-            }}
+            className="bg-us-orange text-white rounded-full px-6 sm:px-8 py-3 text-[14px] sm:text-[15px] font-bold no-underline hover:bg-orange-500 transition-colors duration-200"
           >
             สำรวจเว็บไซต์
           </Link>
           <Link
-            href="/wall"
-            style={{
-              background: "transparent",
-              color: "rgba(249,244,235,0.85)",
-              border: "2px solid rgba(249,244,235,0.4)",
-              borderRadius: 28,
-              padding: "13px 26px",
-              fontFamily: "var(--font-sarabun), sans-serif",
-              fontSize: 15,
-              textDecoration: "none",
-              transition: "all 0.2s",
-            }}
+            href={"/wall" as Route}
+            className="bg-transparent text-us-cream/85 border-2 border-us-cream/40 rounded-full px-5 sm:px-7 py-3 text-[14px] sm:text-[15px] no-underline hover:border-us-cream/70 hover:text-us-cream transition-all duration-200"
           >
             กำแพงนิรนาม →
           </Link>
@@ -181,43 +120,14 @@ export function Hero() {
       </div>
 
       {/* Wave divider */}
-      <svg
-        viewBox="0 0 1440 60"
-        style={{ display: "block", width: "100%", marginTop: "auto" }}
-        preserveAspectRatio="none"
-      >
-        <path
-          d="M0 60 Q360 0 720 30 Q1080 60 1440 10 L1440 60 Z"
-          fill="var(--us-bg)"
-        />
+      <svg viewBox="0 0 1440 60" className="block w-full mt-auto" preserveAspectRatio="none">
+        <path d="M0 60 Q360 0 720 30 Q1080 60 1440 10 L1440 60 Z" fill="var(--us-bg)" />
       </svg>
 
       {/* Scroll hint */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 72,
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 4,
-          opacity: 0.35,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-patrick-hand), cursive",
-            fontSize: 10,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color: "#f9f4eb",
-          }}
-        >
-          scroll
-        </span>
-        <ChevronDown size={18} color="#f9f4eb" strokeWidth={1.5} />
+      <div className="absolute bottom-18 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-35">
+        <span className="text-us-cream text-[10px] tracking-[3px] uppercase">scroll</span>
+        <ChevronDown size={18} color="var(--us-cream, #f9f4eb)" strokeWidth={1.5} />
       </div>
     </section>
   );

@@ -1,3 +1,6 @@
 {
-  "extends": "@unspokenscreen/config/tsconfig.base.json"
+  "extends": "@unspokenscreen/config/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  }
 }

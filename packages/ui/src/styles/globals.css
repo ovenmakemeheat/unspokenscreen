@@ -77,7 +77,7 @@
 }
 
 @theme inline {
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: var(--font-sarabun), "Sarabun", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -142,6 +142,19 @@
   --us-dark: #1e3a4f;
 }
 
+@theme inline {
+  --font-sarabun: var(--font-sarabun);
+  --color-us-bg: var(--us-bg);
+  --color-us-blue: var(--us-blue);
+  --color-us-burg: var(--us-burg);
+  --color-us-orange: var(--us-orange);
+  --color-us-text: var(--us-text);
+  --color-us-muted: var(--us-muted);
+  --color-us-surface: var(--us-surface);
+  --color-us-dark: var(--us-dark);
+  --color-us-cream: #f9f4eb;
+}
+
 /* ── Floating note animations ── */
 @keyframes us-float-a {
   0%, 100% { transform: translateY(0px) rotate(var(--note-r, 0deg)); }
@@ -166,3 +179,12 @@
 .us-float-b { animation: us-float-b 5.5s ease-in-out infinite; }
 .us-float-c { animation: us-float-c 3.8s ease-in-out infinite; }
 .us-heart-pop { animation: us-heart-pop 0.4s ease forwards; }
+
+@keyframes us-note-appear {
+  0%   { opacity: 0; transform: scale(0.6) translateY(24px) rotate(var(--note-r, 0deg)); }
+  60%  { opacity: 1; transform: scale(1.08) translateY(-4px) rotate(var(--note-r, 0deg)); }
+  100% { opacity: 1; transform: scale(1) translateY(0px) rotate(var(--note-r, 0deg)); }
+}
+.us-note-appear {
+  animation: us-note-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

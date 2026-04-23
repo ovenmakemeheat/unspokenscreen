@@ -49,3 +49,7 @@ coverage
 .cache
 tmp
 temp
+
+pass.txt
+.vercel
+.env*.local

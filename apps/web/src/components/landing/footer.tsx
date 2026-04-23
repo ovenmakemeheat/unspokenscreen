@@ -1,63 +1,24 @@
 import Link from "next/link";
+import { NAV_LINKS } from "./nav-links";
 
 export function Footer() {
   return (
-    <footer
-      style={{
-        background: "var(--us-dark)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        padding: "40px 40px 32px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 960,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 16,
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            fontFamily: "var(--font-lora), Georgia, serif",
-            fontStyle: "italic",
-            fontSize: 16,
-            color: "rgba(249,244,235,0.65)",
-            lineHeight: 1.7,
-          }}
-        >
+    <footer className="bg-us-dark border-t border-white/6 py-10 px-5 sm:px-10">
+      <div className="max-w-240 mx-auto flex flex-col items-center gap-4 text-center">
+        <p className="italic text-[16px] text-us-cream/65 leading-[1.7]">
           &ldquo;เพราะหน้าจอนี้... คือพื้นที่ที่ความในใจได้ส่งถึงกัน&rdquo;
-        </div>
+        </p>
 
-        <div
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: 12,
-            color: "rgba(249,244,235,0.25)",
-          }}
-        >
-          The Unspoken Screen · หน้าจอที่อยากให้ครอบครัวได้ยิน
-        </div>
+        <p className="text-[12px] text-us-cream/25">
+          The Unspoken Screen · หน้าจอที่อยากให้ครอบครัวเห็น
+        </p>
 
-        <div style={{ display: "flex", gap: 24 }}>
-          {[
-            ["ปัญหา", "#problem"],
-            ["เสียงจากใจ", "#voices"],
-            ["ข้อมูล", "#data"],
-            ["กำแพงนิรนาม", "/wall"],
-          ].map(([label, href]) => (
+        <div className="flex gap-4 sm:gap-6 flex-wrap justify-center">
+          {NAV_LINKS.map(([label, href]) => (
             <Link
               key={label}
               href={href}
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 12,
-                color: "rgba(249,244,235,0.4)",
-                textDecoration: "none",
-              }}
+              className="text-[12px] text-us-cream/40 no-underline hover:text-us-cream/70 transition-colors duration-150"
             >
               {label}
             </Link>

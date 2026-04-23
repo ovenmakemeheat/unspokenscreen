@@ -5,7 +5,15 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".next/**"]
+      "outputs": ["dist/**", ".next/**"],
+      "env": [
+        "DATABASE_URL",
+        "PUBLIC_SUPABASE_URL",
+        "PUBLIC_SUPABASE_ANON_KEY",
+        "PUBLIC_CORS_ORIGIN",
+        "NODE_ENV",
+        "NEXT_PUBLIC_SERVER_URL"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]

@@ -6,7 +6,9 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "strict": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "types": ["node"]
   }
 }

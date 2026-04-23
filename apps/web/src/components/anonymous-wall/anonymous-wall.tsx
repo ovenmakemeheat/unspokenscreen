@@ -8,117 +8,21 @@ import {
   Users,
   Send,
   Smile,
+  Loader2,
+  Keyboard,
+  Pen,
 } from "lucide-react";
 import { FloatingNote, type NoteData } from "./floating-note";
 import { ExpandedNote } from "./expanded-note";
 import { AvatarFace, AvatarPicker } from "./avatar";
 import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
+import { DrawingModal } from "./drawing-modal";
+import { env } from "@unspokenscreen/env/web";
+
+const API = env.NEXT_PUBLIC_SERVER_URL;
 
 const FILTERS = ["ทั้งหมด", "ครอบครัว", "ความเครียด", "ความฝัน", "ขอบคุณ"];
 const TAGS = FILTERS.slice(1);
-
-const INITIAL_NOTES: NoteData[] = [
-  {
-    id: 1,
-    text: "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
-    tag: "ครอบครัว",
-    hearts: 41,
-    replies: [{ from: "คุณแม่", text: "แม่รู้และภูมิใจในตัวลูกมาก" }],
-    x: 120, y: 160, rotation: -2,
-    color: "#1e3a4f", textColor: "#f9f4eb",
-    floatClass: "us-float-b", width: 170, delay: "0s",
-  },
-  {
-    id: 2,
-    text: "เครียดมากกับ thesis แต่ไม่อยากให้ใครเป็นห่วง",
-    tag: "ความเครียด",
-    hearts: 28,
-    replies: [],
-    x: 420, y: 90, rotation: 1.5,
-    color: "#562634", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 160, delay: "1s",
-  },
-  {
-    id: 3,
-    text: "มีความฝันที่ยังไม่กล้าบอกใคร",
-    tag: "ความฝัน",
-    hearts: 19,
-    replies: [],
-    x: 740, y: 140, rotation: -1,
-    color: "#fef4c0", textColor: "#1a1a1a",
-    floatClass: "us-float-c", width: 148, delay: "0.5s",
-  },
-  {
-    id: 4,
-    text: "อยากให้พ่อรู้ว่าฉันคิดถึงเขามากแค่ไหน",
-    tag: "ครอบครัว",
-    hearts: 55,
-    replies: [{ from: "คุณพ่อ", text: "พ่อก็คิดถึงลูกเช่นกัน" }],
-    x: 200, y: 380, rotation: 2,
-    color: "#2f597a", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 165, delay: "1.2s",
-  },
-  {
-    id: 5,
-    text: "ขอบคุณที่มีพื้นที่ให้ได้พูด",
-    tag: "ขอบคุณ",
-    hearts: 33,
-    replies: [],
-    x: 560, y: 340, rotation: -1.5,
-    color: "#f0e9d8", textColor: "#1a1a1a",
-    floatClass: "us-float-b", width: 148, delay: "0.3s",
-  },
-  {
-    id: 6,
-    text: "กลัวล้มเหลว กลัวทำให้ผิดหวัง",
-    tag: "ความกังวล",
-    hearts: 47,
-    replies: [],
-    x: 860, y: 300, rotation: 2.5,
-    color: "#562634", textColor: "#f9f4eb",
-    floatClass: "us-float-c", width: 145, delay: "0.9s",
-  },
-  {
-    id: 7,
-    text: "บางครั้งฉันเครียดมากแต่ไม่รู้จะบอกใคร",
-    tag: "ความเครียด",
-    hearts: 12,
-    replies: [{ from: "คุณแม่", text: "แม่อยู่ตรงนี้เสมอนะ ไม่ต้องกลัว" }],
-    x: 1060, y: 120, rotation: -3,
-    color: "#fef4c0", textColor: "#1a1a1a",
-    floatClass: "us-float-a", width: 162, delay: "0.7s",
-  },
-  {
-    id: 8,
-    text: "อยากให้พ่อแม่รู้ว่าเกรดไม่ใช่ทุกอย่าง",
-    tag: "ครอบครัว",
-    hearts: 34,
-    replies: [],
-    x: 1300, y: 200, rotation: 1,
-    color: "#fde8d8", textColor: "#1a1a1a",
-    floatClass: "us-float-b", width: 155, delay: "0.2s",
-  },
-  {
-    id: 9,
-    text: "นอนไม่หลับมาสามคืนแล้ว ไม่รู้จะทำยังไง",
-    tag: "ความเครียด",
-    hearts: 21,
-    replies: [],
-    x: 980, y: 400, rotation: -2,
-    color: "#e8f4e8", textColor: "#1a1a1a",
-    floatClass: "us-float-c", width: 158, delay: "1.4s",
-  },
-  {
-    id: 10,
-    text: "อยากคุยกับแม่มากกว่านี้แต่ไม่รู้จะเริ่มยังไง",
-    tag: "ครอบครัว",
-    hearts: 16,
-    replies: [{ from: "คุณแม่", text: "โทรหาแม่ได้เลยนะลูก" }],
-    x: 1500, y: 350, rotation: 1.5,
-    color: "#1e3a4f", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 170, delay: "0.6s",
-  },
-];
 
 const FLOAT_CLASSES: NoteData["floatClass"][] = [
   "us-float-a",
@@ -134,14 +38,24 @@ const NOTE_COLORS = [
   { color: "#2f597a", textColor: "#f9f4eb" },
 ];
 
+function resolveAvatar(avatarId: string | null): AvatarPreset | undefined {
+  if (!avatarId) return undefined;
+  return AVATAR_PRESETS.find((p) => p.id === avatarId);
+}
+
 export function AnonymousWall() {
-  const [notes, setNotes] = useState<NoteData[]>(INITIAL_NOTES);
+  const [notes, setNotes] = useState<NoteData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<NoteData | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState("ทั้งหมด");
   const [inputText, setInputText] = useState("");
   const [selectedTag, setSelectedTag] = useState(TAGS[0]);
   const [submitted, setSubmitted] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [showDrawing, setShowDrawing] = useState(false);
+  const [newNoteId, setNewNoteId] = useState<number | null>(null);
 
   // Avatar state
   const [avatar, setAvatar] = useState<AvatarPreset | null>(null);
@@ -149,11 +63,67 @@ export function AnonymousWall() {
 
   // Canvas pan state
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const didMove = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const lastOffset = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+  const panRafRef = useRef<number | null>(null);
+
+  // Keep offsetRef in sync so panTo can read current value
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
+
+  const panTo = useCallback((targetX: number, targetY: number) => {
+    if (panRafRef.current !== null) cancelAnimationFrame(panRafRef.current);
+    const DURATION = 900;
+    const start = performance.now();
+    const fromX = offsetRef.current.x;
+    const fromY = offsetRef.current.y;
+
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+    const step = (now: number) => {
+      const t = Math.min((now - start) / DURATION, 1);
+      const e = ease(t);
+      const x = fromX + (targetX - fromX) * e;
+      const y = fromY + (targetY - fromY) * e;
+      offsetRef.current = { x, y };
+      setOffset({ x, y });
+      if (t < 1) panRafRef.current = requestAnimationFrame(step);
+      else panRafRef.current = null;
+    };
+    panRafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  // ── Session init ───────────────────────────────────────────
+  useEffect(() => {
+    const stored = localStorage.getItem("us_wall_token");
+    const storedId = localStorage.getItem("us_wall_user_id");
+    if (stored && storedId) {
+      setUserToken(stored);
+      setUserId(Number(storedId));
+      return;
+    }
+    fetch(`${API}/api/wall/session`, { method: "POST" })
+      .then((r) => r.json())
+      .then((data: { token: string; userId: number }) => {
+        localStorage.setItem("us_wall_token", data.token);
+        localStorage.setItem("us_wall_user_id", String(data.userId));
+        setUserToken(data.token);
+        setUserId(data.userId);
+      })
+      .catch(console.error);
+  }, []);
+
+  // ── Fetch notes from API ───────────────────────────────────
+  useEffect(() => {
+    fetch(`${API}/api/wall/notes`)
+      .then((r) => r.json())
+      .then((data: NoteData[]) => setNotes(data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const visible =
     activeFilter === "ทั้งหมด"
@@ -219,35 +189,202 @@ export function AnonymousWall() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const handleSubmit = () => {
-    if (!inputText.trim()) return;
+  // ── Find a placement in an empty area ─────────────────────
+  const findPosition = useCallback(
+    (noteWidth: number, noteHeight: number): { x: number; y: number } => {
+      const cw = canvasRef.current?.clientWidth ?? 800;
+      const ch = canvasRef.current?.clientHeight ?? 500;
+      const cx = -offset.x + cw / 2;
+      const cy = -offset.y + ch / 2;
+
+      const NOTE_H = 120;
+      const JITTER = 18; // small random nudge so grid rows don't look mechanical
+      const CELL_W = noteWidth + 20;
+      const CELL_H = NOTE_H + 20;
+
+      // Grid radiates outward in rings so closer cells are checked first
+      const RINGS = 6;
+      const candidates: { x: number; y: number; dist: number }[] = [];
+      for (let ring = 0; ring <= RINGS; ring++) {
+        for (let col = -ring; col <= ring; col++) {
+          for (let row = -ring; row <= ring; row++) {
+            if (Math.abs(col) !== ring && Math.abs(row) !== ring) continue; // only perimeter of ring
+            const bx = cx + col * CELL_W - noteWidth / 2;
+            const by = cy + row * CELL_H - NOTE_H / 2;
+            const dist = Math.hypot(col, row);
+            candidates.push({ x: bx, y: by, dist });
+          }
+        }
+      }
+
+      const isClear = (x: number, y: number) => {
+        for (const n of notes) {
+          const nw = n.width ?? 150;
+          const ox = Math.max(0, Math.min(x + noteWidth, n.x + nw) - Math.max(x, n.x));
+          const oy = Math.max(0, Math.min(y + noteHeight, n.y + NOTE_H) - Math.max(y, n.y));
+          if (ox * oy > 0) return false; // any overlap = not clear
+        }
+        return true;
+      };
+
+      // Sort by distance from viewport center, try each cell
+      candidates.sort((a, b) => a.dist - b.dist);
+      for (const { x, y } of candidates) {
+        if (isClear(x, y)) {
+          return {
+            x: x + (Math.random() - 0.5) * JITTER,
+            y: y + (Math.random() - 0.5) * JITTER,
+          };
+        }
+      }
+
+      // All grid cells occupied — place in the closest cell with the least overlap
+      let best = candidates[0]!;
+      let bestOverlap = Infinity;
+      for (const c of candidates) {
+        let totalOverlap = 0;
+        for (const n of notes) {
+          const nw = n.width ?? 150;
+          const ox = Math.max(0, Math.min(c.x + noteWidth, n.x + nw) - Math.max(c.x, n.x));
+          const oy = Math.max(0, Math.min(c.y + noteHeight, n.y + NOTE_H) - Math.max(c.y, n.y));
+          totalOverlap += ox * oy;
+        }
+        if (totalOverlap < bestOverlap) { bestOverlap = totalOverlap; best = c; }
+      }
+      return {
+        x: best.x + (Math.random() - 0.5) * JITTER,
+        y: best.y + (Math.random() - 0.5) * JITTER,
+      };
+    },
+    [notes, offset]
+  );
+
+  // ── Submit new note (shared) ───────────────────────────────
+  const postNote = async (text: string, imageData?: string) => {
     const colorPick = NOTE_COLORS[notes.length % NOTE_COLORS.length];
-    const cw = canvasRef.current?.clientWidth ?? 800;
-    const ch = canvasRef.current?.clientHeight ?? 500;
-    const vx = -offset.x + cw / 2 - 80 + (Math.random() - 0.5) * 200;
-    const vy = -offset.y + ch / 2 - 60 + (Math.random() - 0.5) * 120;
-    const newNote: NoteData = {
-      id: Date.now(),
-      text: inputText.trim(),
+    const noteWidth = imageData ? 180 : 145 + Math.floor(Math.random() * 25);
+    const noteHeight = imageData ? 160 : 120;
+    const { x: vx, y: vy } = findPosition(noteWidth, noteHeight);
+
+    const payload = {
+      text,
       tag: selectedTag,
-      hearts: 0,
-      replies: [],
-      x: vx,
-      y: vy,
-      rotation: (Math.random() - 0.5) * 5,
       color: colorPick.color,
       textColor: colorPick.textColor,
       floatClass: FLOAT_CLASSES[notes.length % 3],
-      width: 145 + Math.floor(Math.random() * 25),
+      width: noteWidth,
+      x: vx,
+      y: vy,
+      rotation: (Math.random() - 0.5) * 5,
       delay: `${(notes.length % 4) * 0.4}s`,
-      avatar: avatar ?? undefined,
+      avatarId: avatar?.id ?? null,
+      imageData: imageData ?? null,
     };
-    setNotes((prev) => [...prev, newNote]);
-    setInputText("");
+
+    const res = await fetch(`${API}/api/wall/notes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(userToken ? { "x-user-token": userToken } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    const created: NoteData = await res.json();
+    setNotes((prev) => [...prev, created]);
+    setNewNoteId(created.id);
+    setTimeout(() => setNewNoteId(null), 600);
     setSubmitted(true);
-    setShowSubmit(false);
     setTimeout(() => setSubmitted(false), 2000);
+
+    const cw = canvasRef.current?.clientWidth ?? 800;
+    const ch = canvasRef.current?.clientHeight ?? 500;
+    panTo(-(created.x + (created.width ?? 150) / 2) + cw / 2, -(created.y + 60) + ch / 2);
+    return created;
   };
+
+  const handleSubmit = async () => {
+    if (!inputText.trim()) return;
+    try {
+      await postNote(inputText.trim());
+      setInputText("");
+      setShowSubmit(false);
+    } catch (err) {
+      console.error("Failed to create note:", err);
+    }
+  };
+
+  const handleDrawingSubmit = async (imageData: string) => {
+    setShowDrawing(false);
+    try {
+      await postNote("", imageData);
+    } catch (err) {
+      console.error("Failed to create drawing note:", err);
+    }
+  };
+
+  // ── Delete a note ──────────────────────────────────────────
+  const handleDelete = useCallback(async (noteId: number) => {
+    if (!userToken) return;
+    try {
+      await fetch(`${API}/api/wall/notes/${noteId}`, {
+        method: "DELETE",
+        headers: { "x-user-token": userToken },
+      });
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      console.error("Failed to delete note:", err);
+    }
+  }, [userToken]);
+
+  // ── Edit a note ────────────────────────────────────────────
+  const handleEdit = useCallback(async (noteId: number, text: string, tag: string) => {
+    if (!userToken) return;
+    try {
+      const res = await fetch(`${API}/api/wall/notes/${noteId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-token": userToken,
+        },
+        body: JSON.stringify({ text, tag }),
+      });
+      const updated = await res.json();
+      setNotes((prev) =>
+        prev.map((n) => (n.id === noteId ? { ...n, text: updated.text, tag: updated.tag } : n))
+      );
+    } catch (err) {
+      console.error("Failed to edit note:", err);
+    }
+  }, [userToken]);
+
+  // ── Heart a note ───────────────────────────────────────────
+  const handleHeart = useCallback(async (noteId: number) => {
+    try {
+      await fetch(`${API}/api/wall/notes/${noteId}/heart`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to heart note:", err);
+    }
+  }, []);
+
+  // ── Reply to a note ────────────────────────────────────────
+  const handleReply = useCallback(
+    async (noteId: number, text: string, from: string, avatarId: string | null) => {
+      const res = await fetch(`${API}/api/wall/notes/${noteId}/replies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, from, avatarId }),
+      });
+      const created = await res.json();
+      // Update note in list too
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteId ? { ...n, replies: [...n.replies, created] } : n
+        )
+      );
+      return created;
+    },
+    []
+  );
 
   return (
     <div
@@ -267,26 +404,29 @@ export function AnonymousWall() {
           flexShrink: 0,
           background: "var(--us-dark)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          padding: "0 20px",
+          padding: "0 12px",
           display: "flex",
           alignItems: "center",
-          gap: 14,
+          gap: 8,
           height: 52,
           zIndex: 30,
+          overflowX: "auto",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#f9f4eb" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#f9f4eb" }}>
             โน้ตจากใจ
           </span>
           <span
             style={{
               fontFamily: "'Patrick Hand', cursive",
-              fontSize: 10,
+              fontSize: 9,
               letterSpacing: 2,
               textTransform: "uppercase",
               color: "rgba(249,244,235,0.3)",
+              display: "none",
             }}
+            className="sm-inline"
           >
             Anonymous Wall
           </span>
@@ -303,7 +443,7 @@ export function AnonymousWall() {
         />
 
         {/* Filter chips */}
-        <div style={{ display: "flex", gap: 6, overflowX: "auto", flexShrink: 1 }}>
+        <div style={{ display: "flex", gap: 5, overflowX: "auto", flexShrink: 1, scrollbarWidth: "none" }}>
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -315,8 +455,8 @@ export function AnonymousWall() {
                 border:
                   activeFilter === f ? "none" : "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 14,
-                padding: "4px 12px",
-                fontSize: 12,
+                padding: "4px 10px",
+                fontSize: 11,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
@@ -331,7 +471,7 @@ export function AnonymousWall() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Note count */}
+        {/* Note count — hide label on very small screens */}
         <div
           style={{
             color: "var(--us-orange)",
@@ -341,8 +481,8 @@ export function AnonymousWall() {
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: 20, fontWeight: 700 }}>{notes.length}</span>
-          <span style={{ fontSize: 10, opacity: 0.65 }}>ข้อความ</span>
+          <span style={{ fontSize: 18, fontWeight: 700 }}>{notes.length}</span>
+          <span style={{ fontSize: 9, opacity: 0.65 }}>ข้อความ</span>
         </div>
 
         {/* Avatar button */}
@@ -355,8 +495,8 @@ export function AnonymousWall() {
               ? "2px solid var(--us-orange)"
               : "1px solid rgba(255,255,255,0.15)",
             borderRadius: "50%",
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -367,45 +507,51 @@ export function AnonymousWall() {
           }}
         >
           {avatar ? (
-            <AvatarFace preset={avatar} size={36} />
+            <AvatarFace preset={avatar} size={34} />
           ) : (
-            <Smile size={16} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
+            <Smile size={15} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
           )}
         </button>
 
-        {/* Write button */}
-        <button
-          onClick={() => setShowSubmit((s) => !s)}
-          style={{
-            background: submitted
-              ? "#6b6055"
-              : showSubmit
-              ? "rgba(255,255,255,0.12)"
-              : "var(--us-orange)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 20,
-            padding: "7px 14px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-            transition: "background 0.2s",
-            fontFamily: "'Sarabun', sans-serif",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {submitted ? (
-            <><Check size={14} strokeWidth={2.5} /> ส่งแล้ว</>
-          ) : showSubmit ? (
-            <><X size={14} strokeWidth={2.5} /> ปิด</>
-          ) : (
-            <><PencilLine size={14} strokeWidth={2} /> เขียนโน้ต</>
-          )}
-        </button>
+        {/* Note mode buttons */}
+        {submitted ? (
+          <div style={{
+            background: "#6b6055", color: "#fff", borderRadius: 20,
+            padding: "6px 12px", fontSize: 12, fontWeight: 700,
+            fontFamily: "'Sarabun', sans-serif", display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
+          }}>
+            <Check size={13} strokeWidth={2.5} /> ส่งแล้ว
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+            <button
+              onClick={() => { setShowSubmit((s) => !s); setShowDrawing(false); }}
+              style={{
+                background: showSubmit ? "rgba(255,255,255,0.12)" : "var(--us-orange)",
+                color: "#fff", border: "none", borderRadius: 20,
+                padding: "6px 10px", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", transition: "background 0.2s",
+                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              {showSubmit ? <><X size={12} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={12} strokeWidth={2} /> พิมพ์</>}
+            </button>
+            <button
+              onClick={() => { setShowDrawing(true); setShowSubmit(false); }}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                color: "#f9f4eb", border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 20, padding: "6px 10px", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", transition: "background 0.2s",
+                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <Pen size={12} strokeWidth={2} /> เขียน
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Submit panel ──────────────────────────────────────── */}
@@ -547,6 +693,30 @@ export function AnonymousWall() {
           WebkitUserSelect: "none",
         }}
       >
+        {/* Loading state */}
+        {loading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              color: "rgba(249,244,235,0.4)",
+              fontFamily: "'Sarabun', sans-serif",
+              fontSize: 13,
+            }}
+          >
+            <Loader2
+              size={16}
+              strokeWidth={2}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+            กำลังโหลด...
+          </div>
+        )}
+
         {/* Dot grid */}
         <svg
           style={{
@@ -610,11 +780,18 @@ export function AnonymousWall() {
             ))}
           </svg>
 
-          {visible.map((n) => (
+          {visible.map((n, i) => (
             <FloatingNote
               key={n.id}
               {...n}
+              zIndex={visible.length - i}
+              resolvedAvatar={resolveAvatar(n.avatarId)}
+              isOwner={userId !== null && n.userId === userId}
+              isNew={n.id === newNoteId}
               onExpand={() => handleNoteExpand(n)}
+              onHeart={() => handleHeart(n.id)}
+              onDelete={() => handleDelete(n.id)}
+              onEdit={(text, tag) => handleEdit(n.id, text, tag)}
             />
           ))}
         </div>
@@ -622,8 +799,13 @@ export function AnonymousWall() {
         {expanded && (
           <ExpandedNote
             note={expanded}
-            onClose={() => setExpanded(null)}
+            resolvedAvatar={resolveAvatar(expanded.avatarId)}
             replyAvatar={avatar}
+            onClose={() => setExpanded(null)}
+            onHeart={() => handleHeart(expanded.id)}
+            onReply={(text, from, avatarId) =>
+              handleReply(expanded.id, text, from, avatarId)
+            }
           />
         )}
 
@@ -664,6 +846,14 @@ export function AnonymousWall() {
           กดที่โน้ตเพื่อส่งกำลังใจ
         </div>
       </div>
+
+      {/* ── Drawing modal ─────────────────────────────────────── */}
+      {showDrawing && (
+        <DrawingModal
+          onClose={() => setShowDrawing(false)}
+          onSubmit={handleDrawingSubmit}
+        />
+      )}
 
       {/* ── Avatar picker modal ───────────────────────────────── */}
       {showAvatarPicker && (
