@@ -10,20 +10,22 @@ export type NoteData = {
   text: string;
   tag: string;
   hearts: number;
-  replies: { from: string; text: string; avatar?: AvatarPreset }[];
+  replies: { id: number; from: string; text: string; avatarId: string | null }[];
   x: number;
   y: number;
   rotation: number;
   color: string;
   textColor?: string;
-  floatClass: "us-float-a" | "us-float-b" | "us-float-c";
+  floatClass: string;
   width: number;
   delay: string;
-  avatar?: AvatarPreset;
+  avatarId: string | null;
 };
 
 type Props = NoteData & {
+  resolvedAvatar: AvatarPreset | undefined;
   onExpand: () => void;
+  onHeart: () => void;
 };
 
 export function FloatingNote({
@@ -39,8 +41,9 @@ export function FloatingNote({
   floatClass,
   width,
   delay,
-  avatar,
+  resolvedAvatar,
   onExpand,
+  onHeart,
 }: Props) {
   const [hearts, setHearts] = useState(initHearts);
   const [hearted, setHearted] = useState(false);
@@ -52,6 +55,7 @@ export function FloatingNote({
       setHearts((h) => h + 1);
       setHearted(true);
       setHeartAnim(true);
+      onHeart();
       setTimeout(() => setHeartAnim(false), 400);
     }
   };
@@ -120,7 +124,7 @@ export function FloatingNote({
         >
           {tag}
         </div>
-        {avatar && <AvatarFace preset={avatar} size={20} />}
+        {resolvedAvatar && <AvatarFace preset={resolvedAvatar} size={20} />}
       </div>
 
       {/* Text */}

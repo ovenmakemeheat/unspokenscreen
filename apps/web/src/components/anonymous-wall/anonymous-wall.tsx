@@ -8,117 +8,18 @@ import {
   Users,
   Send,
   Smile,
+  Loader2,
 } from "lucide-react";
 import { FloatingNote, type NoteData } from "./floating-note";
 import { ExpandedNote } from "./expanded-note";
 import { AvatarFace, AvatarPicker } from "./avatar";
 import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
+import { env } from "@unspokenscreen/env/web";
+
+const API = env.NEXT_PUBLIC_SERVER_URL;
 
 const FILTERS = ["ทั้งหมด", "ครอบครัว", "ความเครียด", "ความฝัน", "ขอบคุณ"];
 const TAGS = FILTERS.slice(1);
-
-const INITIAL_NOTES: NoteData[] = [
-  {
-    id: 1,
-    text: "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
-    tag: "ครอบครัว",
-    hearts: 41,
-    replies: [{ from: "คุณแม่", text: "แม่รู้และภูมิใจในตัวลูกมาก" }],
-    x: 120, y: 160, rotation: -2,
-    color: "#1e3a4f", textColor: "#f9f4eb",
-    floatClass: "us-float-b", width: 170, delay: "0s",
-  },
-  {
-    id: 2,
-    text: "เครียดมากกับ thesis แต่ไม่อยากให้ใครเป็นห่วง",
-    tag: "ความเครียด",
-    hearts: 28,
-    replies: [],
-    x: 420, y: 90, rotation: 1.5,
-    color: "#562634", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 160, delay: "1s",
-  },
-  {
-    id: 3,
-    text: "มีความฝันที่ยังไม่กล้าบอกใคร",
-    tag: "ความฝัน",
-    hearts: 19,
-    replies: [],
-    x: 740, y: 140, rotation: -1,
-    color: "#fef4c0", textColor: "#1a1a1a",
-    floatClass: "us-float-c", width: 148, delay: "0.5s",
-  },
-  {
-    id: 4,
-    text: "อยากให้พ่อรู้ว่าฉันคิดถึงเขามากแค่ไหน",
-    tag: "ครอบครัว",
-    hearts: 55,
-    replies: [{ from: "คุณพ่อ", text: "พ่อก็คิดถึงลูกเช่นกัน" }],
-    x: 200, y: 380, rotation: 2,
-    color: "#2f597a", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 165, delay: "1.2s",
-  },
-  {
-    id: 5,
-    text: "ขอบคุณที่มีพื้นที่ให้ได้พูด",
-    tag: "ขอบคุณ",
-    hearts: 33,
-    replies: [],
-    x: 560, y: 340, rotation: -1.5,
-    color: "#f0e9d8", textColor: "#1a1a1a",
-    floatClass: "us-float-b", width: 148, delay: "0.3s",
-  },
-  {
-    id: 6,
-    text: "กลัวล้มเหลว กลัวทำให้ผิดหวัง",
-    tag: "ความกังวล",
-    hearts: 47,
-    replies: [],
-    x: 860, y: 300, rotation: 2.5,
-    color: "#562634", textColor: "#f9f4eb",
-    floatClass: "us-float-c", width: 145, delay: "0.9s",
-  },
-  {
-    id: 7,
-    text: "บางครั้งฉันเครียดมากแต่ไม่รู้จะบอกใคร",
-    tag: "ความเครียด",
-    hearts: 12,
-    replies: [{ from: "คุณแม่", text: "แม่อยู่ตรงนี้เสมอนะ ไม่ต้องกลัว" }],
-    x: 1060, y: 120, rotation: -3,
-    color: "#fef4c0", textColor: "#1a1a1a",
-    floatClass: "us-float-a", width: 162, delay: "0.7s",
-  },
-  {
-    id: 8,
-    text: "อยากให้พ่อแม่รู้ว่าเกรดไม่ใช่ทุกอย่าง",
-    tag: "ครอบครัว",
-    hearts: 34,
-    replies: [],
-    x: 1300, y: 200, rotation: 1,
-    color: "#fde8d8", textColor: "#1a1a1a",
-    floatClass: "us-float-b", width: 155, delay: "0.2s",
-  },
-  {
-    id: 9,
-    text: "นอนไม่หลับมาสามคืนแล้ว ไม่รู้จะทำยังไง",
-    tag: "ความเครียด",
-    hearts: 21,
-    replies: [],
-    x: 980, y: 400, rotation: -2,
-    color: "#e8f4e8", textColor: "#1a1a1a",
-    floatClass: "us-float-c", width: 158, delay: "1.4s",
-  },
-  {
-    id: 10,
-    text: "อยากคุยกับแม่มากกว่านี้แต่ไม่รู้จะเริ่มยังไง",
-    tag: "ครอบครัว",
-    hearts: 16,
-    replies: [{ from: "คุณแม่", text: "โทรหาแม่ได้เลยนะลูก" }],
-    x: 1500, y: 350, rotation: 1.5,
-    color: "#1e3a4f", textColor: "#f9f4eb",
-    floatClass: "us-float-a", width: 170, delay: "0.6s",
-  },
-];
 
 const FLOAT_CLASSES: NoteData["floatClass"][] = [
   "us-float-a",
@@ -134,8 +35,14 @@ const NOTE_COLORS = [
   { color: "#2f597a", textColor: "#f9f4eb" },
 ];
 
+function resolveAvatar(avatarId: string | null): AvatarPreset | undefined {
+  if (!avatarId) return undefined;
+  return AVATAR_PRESETS.find((p) => p.id === avatarId);
+}
+
 export function AnonymousWall() {
-  const [notes, setNotes] = useState<NoteData[]>(INITIAL_NOTES);
+  const [notes, setNotes] = useState<NoteData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<NoteData | null>(null);
   const [activeFilter, setActiveFilter] = useState("ทั้งหมด");
   const [inputText, setInputText] = useState("");
@@ -154,6 +61,15 @@ export function AnonymousWall() {
   const dragStart = useRef({ x: 0, y: 0 });
   const lastOffset = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // ── Fetch notes from API ───────────────────────────────────
+  useEffect(() => {
+    fetch(`${API}/api/wall/notes`)
+      .then((r) => r.json())
+      .then((data: NoteData[]) => setNotes(data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const visible =
     activeFilter === "ทั้งหมด"
@@ -219,35 +135,74 @@ export function AnonymousWall() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const handleSubmit = () => {
+  // ── Submit new note ────────────────────────────────────────
+  const handleSubmit = async () => {
     if (!inputText.trim()) return;
     const colorPick = NOTE_COLORS[notes.length % NOTE_COLORS.length];
     const cw = canvasRef.current?.clientWidth ?? 800;
     const ch = canvasRef.current?.clientHeight ?? 500;
     const vx = -offset.x + cw / 2 - 80 + (Math.random() - 0.5) * 200;
     const vy = -offset.y + ch / 2 - 60 + (Math.random() - 0.5) * 120;
-    const newNote: NoteData = {
-      id: Date.now(),
+
+    const payload = {
       text: inputText.trim(),
       tag: selectedTag,
-      hearts: 0,
-      replies: [],
-      x: vx,
-      y: vy,
-      rotation: (Math.random() - 0.5) * 5,
       color: colorPick.color,
       textColor: colorPick.textColor,
       floatClass: FLOAT_CLASSES[notes.length % 3],
       width: 145 + Math.floor(Math.random() * 25),
+      x: vx,
+      y: vy,
+      rotation: (Math.random() - 0.5) * 5,
       delay: `${(notes.length % 4) * 0.4}s`,
-      avatar: avatar ?? undefined,
+      avatarId: avatar?.id ?? null,
     };
-    setNotes((prev) => [...prev, newNote]);
-    setInputText("");
-    setSubmitted(true);
-    setShowSubmit(false);
-    setTimeout(() => setSubmitted(false), 2000);
+
+    try {
+      const res = await fetch(`${API}/api/wall/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const created: NoteData = await res.json();
+      setNotes((prev) => [...prev, created]);
+      setInputText("");
+      setSubmitted(true);
+      setShowSubmit(false);
+      setTimeout(() => setSubmitted(false), 2000);
+    } catch (err) {
+      console.error("Failed to create note:", err);
+    }
   };
+
+  // ── Heart a note ───────────────────────────────────────────
+  const handleHeart = useCallback(async (noteId: number) => {
+    try {
+      await fetch(`${API}/api/wall/notes/${noteId}/heart`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to heart note:", err);
+    }
+  }, []);
+
+  // ── Reply to a note ────────────────────────────────────────
+  const handleReply = useCallback(
+    async (noteId: number, text: string, from: string, avatarId: string | null) => {
+      const res = await fetch(`${API}/api/wall/notes/${noteId}/replies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, from, avatarId }),
+      });
+      const created = await res.json();
+      // Update note in list too
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteId ? { ...n, replies: [...n.replies, created] } : n
+        )
+      );
+      return created;
+    },
+    []
+  );
 
   return (
     <div
@@ -547,6 +502,30 @@ export function AnonymousWall() {
           WebkitUserSelect: "none",
         }}
       >
+        {/* Loading state */}
+        {loading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              color: "rgba(249,244,235,0.4)",
+              fontFamily: "'Sarabun', sans-serif",
+              fontSize: 13,
+            }}
+          >
+            <Loader2
+              size={16}
+              strokeWidth={2}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+            กำลังโหลด...
+          </div>
+        )}
+
         {/* Dot grid */}
         <svg
           style={{
@@ -614,7 +593,9 @@ export function AnonymousWall() {
             <FloatingNote
               key={n.id}
               {...n}
+              resolvedAvatar={resolveAvatar(n.avatarId)}
               onExpand={() => handleNoteExpand(n)}
+              onHeart={() => handleHeart(n.id)}
             />
           ))}
         </div>
@@ -622,8 +603,13 @@ export function AnonymousWall() {
         {expanded && (
           <ExpandedNote
             note={expanded}
-            onClose={() => setExpanded(null)}
+            resolvedAvatar={resolveAvatar(expanded.avatarId)}
             replyAvatar={avatar}
+            onClose={() => setExpanded(null)}
+            onHeart={() => handleHeart(expanded.id)}
+            onReply={(text, from, avatarId) =>
+              handleReply(expanded.id, text, from, avatarId)
+            }
           />
         )}
 

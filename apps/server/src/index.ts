@@ -5,6 +5,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { surveyRouter } from "./routes/survey.js";
+import { wallRouter } from "./routes/wall.js";
 
 const app = new Hono();
 
@@ -15,7 +16,7 @@ api.use(
   "/*",
   cors({
     origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   }),
 );
 
@@ -24,6 +25,9 @@ api.get("/", (c) => c.text("OK"));
 
 // ── Survey routes ─────────────────────────────────────────────
 api.route("/api/survey", surveyRouter);
+
+// ── Wall routes ────────────────────────────────────────────────
+api.route("/api/wall", wallRouter);
 
 // ── OpenAPI spec ──────────────────────────────────────────────
 api.doc("/api/openapi.json", {
