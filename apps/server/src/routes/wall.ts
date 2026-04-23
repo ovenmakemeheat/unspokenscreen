@@ -54,6 +54,7 @@ router.get("/notes", async (c) => {
     rotation: n.rotation,
     delay: n.delay,
     avatarId: n.avatarId,
+    imageData: n.imageData,
     userId: n.userId,
     replies: (replyMap.get(n.id) ?? []).map((r) => ({
       id: r.id,
@@ -68,7 +69,7 @@ router.get("/notes", async (c) => {
 
 // ── POST /api/wall/notes ───────────────────────────────────────
 const CreateNoteSchema = z.object({
-  text: z.string().min(1).max(300),
+  text: z.string().max(300).default(""),
   tag: z.string().min(1),
   color: z.string(),
   textColor: z.string(),
@@ -79,6 +80,7 @@ const CreateNoteSchema = z.object({
   rotation: z.number(),
   delay: z.string(),
   avatarId: z.string().nullable().optional(),
+  imageData: z.string().nullable().optional(),
 });
 
 router.post("/notes", async (c) => {
@@ -102,6 +104,7 @@ router.post("/notes", async (c) => {
       rotation: body.rotation,
       delay: body.delay,
       avatarId: body.avatarId ?? null,
+      imageData: body.imageData ?? null,
       userId: user.id,
     })
     .returning();
@@ -122,6 +125,7 @@ router.post("/notes", async (c) => {
       rotation: note.rotation,
       delay: note.delay,
       avatarId: note.avatarId,
+      imageData: note.imageData,
       userId: note.userId,
       replies: [],
     },

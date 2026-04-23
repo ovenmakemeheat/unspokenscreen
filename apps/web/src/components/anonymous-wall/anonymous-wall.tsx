@@ -9,11 +9,14 @@ import {
   Send,
   Smile,
   Loader2,
+  Keyboard,
+  Pen,
 } from "lucide-react";
 import { FloatingNote, type NoteData } from "./floating-note";
 import { ExpandedNote } from "./expanded-note";
 import { AvatarFace, AvatarPicker } from "./avatar";
 import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
+import { DrawingModal } from "./drawing-modal";
 import { env } from "@unspokenscreen/env/web";
 
 const API = env.NEXT_PUBLIC_SERVER_URL;
@@ -51,6 +54,7 @@ export function AnonymousWall() {
   const [selectedTag, setSelectedTag] = useState(TAGS[0]);
   const [submitted, setSubmitted] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [showDrawing, setShowDrawing] = useState(false);
   const [newNoteId, setNewNoteId] = useState<number | null>(null);
 
   // Avatar state
@@ -255,16 +259,15 @@ export function AnonymousWall() {
     [notes, offset]
   );
 
-  // ── Submit new note ────────────────────────────────────────
-  const handleSubmit = async () => {
-    if (!inputText.trim()) return;
+  // ── Submit new note (shared) ───────────────────────────────
+  const postNote = async (text: string, imageData?: string) => {
     const colorPick = NOTE_COLORS[notes.length % NOTE_COLORS.length];
-    const noteWidth = 145 + Math.floor(Math.random() * 25);
-    const noteHeight = 120;
+    const noteWidth = imageData ? 180 : 145 + Math.floor(Math.random() * 25);
+    const noteHeight = imageData ? 160 : 120;
     const { x: vx, y: vy } = findPosition(noteWidth, noteHeight);
 
     const payload = {
-      text: inputText.trim(),
+      text,
       tag: selectedTag,
       color: colorPick.color,
       textColor: colorPick.textColor,
@@ -275,32 +278,47 @@ export function AnonymousWall() {
       rotation: (Math.random() - 0.5) * 5,
       delay: `${(notes.length % 4) * 0.4}s`,
       avatarId: avatar?.id ?? null,
+      imageData: imageData ?? null,
     };
 
-    try {
-      const res = await fetch(`${API}/api/wall/notes`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(userToken ? { "x-user-token": userToken } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-      const created: NoteData = await res.json();
-      setNotes((prev) => [...prev, created]);
-      setNewNoteId(created.id);
-      setTimeout(() => setNewNoteId(null), 600);
-      setInputText("");
-      setSubmitted(true);
-      setShowSubmit(false);
-      setTimeout(() => setSubmitted(false), 2000);
+    const res = await fetch(`${API}/api/wall/notes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(userToken ? { "x-user-token": userToken } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    const created: NoteData = await res.json();
+    setNotes((prev) => [...prev, created]);
+    setNewNoteId(created.id);
+    setTimeout(() => setNewNoteId(null), 600);
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 2000);
 
-      // Pan canvas so the new note is centered in the viewport
-      const cw = canvasRef.current?.clientWidth ?? 800;
-      const ch = canvasRef.current?.clientHeight ?? 500;
-      panTo(-(created.x + (created.width ?? 150) / 2) + cw / 2, -(created.y + 60) + ch / 2);
+    const cw = canvasRef.current?.clientWidth ?? 800;
+    const ch = canvasRef.current?.clientHeight ?? 500;
+    panTo(-(created.x + (created.width ?? 150) / 2) + cw / 2, -(created.y + 60) + ch / 2);
+    return created;
+  };
+
+  const handleSubmit = async () => {
+    if (!inputText.trim()) return;
+    try {
+      await postNote(inputText.trim());
+      setInputText("");
+      setShowSubmit(false);
     } catch (err) {
       console.error("Failed to create note:", err);
+    }
+  };
+
+  const handleDrawingSubmit = async (imageData: string) => {
+    setShowDrawing(false);
+    try {
+      await postNote("", imageData);
+    } catch (err) {
+      console.error("Failed to create drawing note:", err);
     }
   };
 
@@ -492,39 +510,45 @@ export function AnonymousWall() {
           )}
         </button>
 
-        {/* Write button */}
-        <button
-          onClick={() => setShowSubmit((s) => !s)}
-          style={{
-            background: submitted
-              ? "#6b6055"
-              : showSubmit
-              ? "rgba(255,255,255,0.12)"
-              : "var(--us-orange)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 20,
-            padding: "7px 14px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-            transition: "background 0.2s",
-            fontFamily: "'Sarabun', sans-serif",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {submitted ? (
-            <><Check size={14} strokeWidth={2.5} /> ส่งแล้ว</>
-          ) : showSubmit ? (
-            <><X size={14} strokeWidth={2.5} /> ปิด</>
-          ) : (
-            <><PencilLine size={14} strokeWidth={2} /> เขียนโน้ต</>
-          )}
-        </button>
+        {/* Note mode buttons */}
+        {submitted ? (
+          <div style={{
+            background: "#6b6055", color: "#fff", borderRadius: 20,
+            padding: "7px 14px", fontSize: 13, fontWeight: 700,
+            fontFamily: "'Sarabun', sans-serif", display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+          }}>
+            <Check size={14} strokeWidth={2.5} /> ส่งแล้ว
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button
+              onClick={() => { setShowSubmit((s) => !s); setShowDrawing(false); }}
+              style={{
+                background: showSubmit ? "rgba(255,255,255,0.12)" : "var(--us-orange)",
+                color: "#fff", border: "none", borderRadius: 20,
+                padding: "7px 12px", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", transition: "background 0.2s",
+                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
+                display: "flex", alignItems: "center", gap: 5,
+              }}
+            >
+              {showSubmit ? <><X size={13} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={13} strokeWidth={2} /> พิมพ์</>}
+            </button>
+            <button
+              onClick={() => { setShowDrawing(true); setShowSubmit(false); }}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                color: "#f9f4eb", border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 20, padding: "7px 12px", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", transition: "background 0.2s",
+                fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
+                display: "flex", alignItems: "center", gap: 5,
+              }}
+            >
+              <Pen size={13} strokeWidth={2} /> เขียน
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Submit panel ──────────────────────────────────────── */}
@@ -819,6 +843,14 @@ export function AnonymousWall() {
           กดที่โน้ตเพื่อส่งกำลังใจ
         </div>
       </div>
+
+      {/* ── Drawing modal ─────────────────────────────────────── */}
+      {showDrawing && (
+        <DrawingModal
+          onClose={() => setShowDrawing(false)}
+          onSubmit={handleDrawingSubmit}
+        />
+      )}
 
       {/* ── Avatar picker modal ───────────────────────────────── */}
       {showAvatarPicker && (

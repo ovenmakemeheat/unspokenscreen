@@ -73,6 +73,7 @@ export const wallNotes = pgTable("wall_notes", {
   rotation: real("rotation").notNull().default(0),
   delay: text("delay").notNull().default("0s"),
   avatarId: text("avatar_id"),
+  imageData: text("image_data"),
   userId: bigint("user_id", { mode: "number" }).references(() => wallUsers.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

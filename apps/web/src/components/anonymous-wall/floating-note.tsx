@@ -20,6 +20,7 @@ export type NoteData = {
   width: number;
   delay: string;
   avatarId: string | null;
+  imageData: string | null;
   userId: number | null;
 };
 
@@ -47,6 +48,7 @@ export function FloatingNote({
   floatClass,
   width,
   delay,
+  imageData,
   resolvedAvatar,
   zIndex = 2,
   isOwner = false,
@@ -265,7 +267,7 @@ export function FloatingNote({
         {resolvedAvatar && <AvatarFace preset={resolvedAvatar} size={20} />}
       </div>
 
-      {/* Text / Edit area */}
+      {/* Text / Image / Edit area */}
       {editing ? (
         <div onClick={(e) => e.stopPropagation()}>
           <textarea
@@ -307,6 +309,18 @@ export function FloatingNote({
             </button>
           </div>
         </div>
+      ) : imageData ? (
+        <img
+          src={imageData}
+          alt="handwritten note"
+          draggable={false}
+          style={{
+            width: "100%",
+            borderRadius: 3,
+            display: "block",
+            pointerEvents: "none",
+          }}
+        />
       ) : (
         <div
           style={{
