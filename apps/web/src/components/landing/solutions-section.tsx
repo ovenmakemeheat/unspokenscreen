@@ -31,19 +31,19 @@ const SOLUTIONS = [
 
 export function SolutionsSection() {
   return (
-    <section id="solutions" className="bg-us-dark py-20 px-10">
+    <section id="solutions" className="bg-us-dark py-14 sm:py-20 px-5 sm:px-10">
       <div className="max-w-240 mx-auto">
         <p className="text-[11px] tracking-[3px] uppercase text-us-cream/35 mb-3 font-semibold">
           แนวทางการแก้ไขปัญหา
         </p>
 
-        <h2 className="text-[clamp(24px,3.5vw,38px)] font-bold text-us-cream mb-12">
+        <h2 className="text-[clamp(22px,3.5vw,38px)] font-bold text-us-cream mb-8 sm:mb-12">
           เราต้องการสะพาน
           <br />
           <span className="text-us-orange">ไม่ใช่กำแพง</span>
         </h2>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-6 mb-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-10 sm:mb-14">
           {SOLUTIONS.map((s) => (
             <div
               key={s.title}
@@ -64,7 +64,7 @@ export function SolutionsSection() {
         </div>
 
         {/* CTA block */}
-        <div className="bg-us-orange/[0.12] border border-us-orange/30 rounded-xl px-9 py-8 flex items-center justify-between flex-wrap gap-5">
+        <div className="bg-us-orange/[0.12] border border-us-orange/30 rounded-xl px-5 sm:px-9 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5">
           <div>
             <p className="text-[18px] font-bold text-us-cream mb-1.5">พร้อมแล้วไหม?</p>
             <p className="text-[14px] text-us-cream/60 italic">

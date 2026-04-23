@@ -24,17 +24,17 @@ function AnimatedStat({ value, suffix = "%", label, sub }: StatProps) {
 
 export function ProblemSection() {
   return (
-    <section id="problem" className="bg-us-bg py-20 px-10">
+    <section id="problem" className="bg-us-bg py-14 sm:py-20 px-5 sm:px-10">
       <div className="max-w-240 mx-auto">
         <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
           ที่มาและความสำคัญ
         </p>
 
-        <h2 className="text-[clamp(26px,4vw,40px)] font-bold text-us-dark leading-snug mb-5 border-b-[3px] border-us-burg pb-4">
+        <h2 className="text-[clamp(24px,4vw,40px)] font-bold text-us-dark leading-snug mb-5 border-b-[3px] border-us-burg pb-4">
           ปัญหานี้ไม่ได้ไกลตัว
         </h2>
 
-        <p className="text-[16px] text-us-text leading-[1.85] max-w-170 mb-14">
+        <p className="text-[15px] sm:text-[16px] text-us-text leading-[1.85] max-w-170 mb-10 sm:mb-14">
           ผลสำรวจจาก 15 มหาวิทยาลัยทั่วประเทศไทยเผยให้เห็นภาพที่น่ากังวล
           สาเหตุหลักของความเครียดสะสม คือ{" "}
           <strong className="text-us-burg">&ldquo;ความคาดหวังของครอบครัว&rdquo;</strong>{" "}
@@ -42,14 +42,14 @@ export function ProblemSection() {
         </p>
 
         {/* Stat cards */}
-        <div className="flex gap-5 flex-wrap mb-14">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-10 sm:mb-14">
           <AnimatedStat value={30} label="มีอาการเครียดสะสมและซึมเศร้า" sub="จากนักศึกษาทั่วประเทศ" />
           <AnimatedStat value={80} label="มีความเครียดและวิตกกังวลสูง" sub="มีรากฐานจากความคาดหวังครอบครัว" />
           <AnimatedStat value={4} label="มีความคิดอยากทำร้ายตัวเองบ่อยครั้ง" sub="ตัวเลขที่ซ่อนอยู่ใต้ผลการเรียน" />
         </div>
 
         {/* Insight cards */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {[
             {
               title: "จากเรื่องส่วนตัว สู่โครงสร้างสังคม",

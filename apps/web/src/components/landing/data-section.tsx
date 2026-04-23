@@ -312,7 +312,7 @@ export function DataSection() {
   );
 
   return (
-    <section id="data" className="bg-us-surface py-20 px-10">
+    <section id="data" className="bg-us-surface py-14 sm:py-20 px-5 sm:px-10">
       <div className="max-w-240 mx-auto">
         {/* Header */}
         <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
@@ -321,7 +321,7 @@ export function DataSection() {
         <h2 className="text-[clamp(24px,3.5vw,38px)] font-bold text-us-dark mb-3">
           ตัวเลขที่ซ่อนอยู่ใต้ผลการเรียน
         </h2>
-        <p className="italic text-[15px] text-us-muted mb-14 max-w-140 leading-[1.7]">
+        <p className="italic text-[14px] sm:text-[15px] text-us-muted mb-10 sm:mb-14 max-w-140 leading-[1.7]">
           ลูกของคุณไม่ได้เหนื่อยอยู่คนเดียว — นี่คือปัญหาร่วมกันของทั้งรุ่น
         </p>
 
@@ -338,7 +338,7 @@ export function DataSection() {
 
         {/* ── Summary total ── */}
         {summary && (
-          <div className="bg-us-dark rounded-xl px-7 py-6 mb-10 flex items-center gap-6 flex-wrap">
+          <div className="bg-us-dark rounded-xl px-5 sm:px-7 py-5 sm:py-6 mb-8 sm:mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 flex-wrap">
             <div>
               <div className="text-[clamp(36px,5vw,52px)] font-bold text-us-orange leading-none">
                 {summary.totalResponses}
@@ -347,7 +347,7 @@ export function DataSection() {
                 ผู้ตอบแบบสอบถาม
               </p>
             </div>
-            <div className="w-px h-12 bg-white/10 shrink-0" />
+            <div className="hidden sm:block w-px h-12 bg-white/10 shrink-0" />
             <div className="flex gap-4 flex-wrap">
               {Object.entries(summary.yearBreakdown).map(([year, count]) => (
                 <div key={year} className="text-center">
@@ -384,11 +384,11 @@ export function DataSection() {
 
         {/* ── Detailed distribution charts (scale 1–5) ── */}
         {detailScales.length > 0 && (
-          <div className="mb-14">
+          <div className="mb-10 sm:mb-14">
             <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
               การกระจายคำตอบ (1 = น้อยมาก · 5 = มากที่สุด)
             </p>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {detailScales.map((q) => (
                 <div
                   key={q.id}
@@ -406,11 +406,11 @@ export function DataSection() {
 
         {/* ── Choice bar charts ── */}
         {choiceQuestions.length > 0 && (
-          <div className="mb-14">
+          <div className="mb-10 sm:mb-14">
             <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
               คำตอบแบบเลือก — ความถี่ที่พบมากที่สุด
             </p>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {choiceQuestions.map((q) => (
                 <ChoiceChart key={q.id} question={q} />
               ))}
@@ -424,7 +424,7 @@ export function DataSection() {
             <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
               เสียงจากผู้ตอบ — Word Cloud
             </p>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {wordcloudQuestions.map((q) => (
                 <WordCloudCard key={q.id} question={q} />
               ))}

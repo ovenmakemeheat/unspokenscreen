@@ -404,26 +404,29 @@ export function AnonymousWall() {
           flexShrink: 0,
           background: "var(--us-dark)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          padding: "0 20px",
+          padding: "0 12px",
           display: "flex",
           alignItems: "center",
-          gap: 14,
+          gap: 8,
           height: 52,
           zIndex: 30,
+          overflowX: "auto",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#f9f4eb" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#f9f4eb" }}>
             โน้ตจากใจ
           </span>
           <span
             style={{
               fontFamily: "'Patrick Hand', cursive",
-              fontSize: 10,
+              fontSize: 9,
               letterSpacing: 2,
               textTransform: "uppercase",
               color: "rgba(249,244,235,0.3)",
+              display: "none",
             }}
+            className="sm-inline"
           >
             Anonymous Wall
           </span>
@@ -440,7 +443,7 @@ export function AnonymousWall() {
         />
 
         {/* Filter chips */}
-        <div style={{ display: "flex", gap: 6, overflowX: "auto", flexShrink: 1 }}>
+        <div style={{ display: "flex", gap: 5, overflowX: "auto", flexShrink: 1, scrollbarWidth: "none" }}>
           {FILTERS.map((f) => (
             <button
               key={f}
@@ -452,8 +455,8 @@ export function AnonymousWall() {
                 border:
                   activeFilter === f ? "none" : "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 14,
-                padding: "4px 12px",
-                fontSize: 12,
+                padding: "4px 10px",
+                fontSize: 11,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
@@ -468,7 +471,7 @@ export function AnonymousWall() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Note count */}
+        {/* Note count — hide label on very small screens */}
         <div
           style={{
             color: "var(--us-orange)",
@@ -478,8 +481,8 @@ export function AnonymousWall() {
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: 20, fontWeight: 700 }}>{notes.length}</span>
-          <span style={{ fontSize: 10, opacity: 0.65 }}>ข้อความ</span>
+          <span style={{ fontSize: 18, fontWeight: 700 }}>{notes.length}</span>
+          <span style={{ fontSize: 9, opacity: 0.65 }}>ข้อความ</span>
         </div>
 
         {/* Avatar button */}
@@ -492,8 +495,8 @@ export function AnonymousWall() {
               ? "2px solid var(--us-orange)"
               : "1px solid rgba(255,255,255,0.15)",
             borderRadius: "50%",
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -504,9 +507,9 @@ export function AnonymousWall() {
           }}
         >
           {avatar ? (
-            <AvatarFace preset={avatar} size={36} />
+            <AvatarFace preset={avatar} size={34} />
           ) : (
-            <Smile size={16} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
+            <Smile size={15} color="rgba(249,244,235,0.5)" strokeWidth={1.5} />
           )}
         </button>
 
@@ -514,38 +517,38 @@ export function AnonymousWall() {
         {submitted ? (
           <div style={{
             background: "#6b6055", color: "#fff", borderRadius: 20,
-            padding: "7px 14px", fontSize: 13, fontWeight: 700,
-            fontFamily: "'Sarabun', sans-serif", display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+            padding: "6px 12px", fontSize: 12, fontWeight: 700,
+            fontFamily: "'Sarabun', sans-serif", display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
           }}>
-            <Check size={14} strokeWidth={2.5} /> ส่งแล้ว
+            <Check size={13} strokeWidth={2.5} /> ส่งแล้ว
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
             <button
               onClick={() => { setShowSubmit((s) => !s); setShowDrawing(false); }}
               style={{
                 background: showSubmit ? "rgba(255,255,255,0.12)" : "var(--us-orange)",
                 color: "#fff", border: "none", borderRadius: 20,
-                padding: "7px 12px", fontSize: 13, fontWeight: 700,
+                padding: "6px 10px", fontSize: 12, fontWeight: 700,
                 cursor: "pointer", transition: "background 0.2s",
                 fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
-                display: "flex", alignItems: "center", gap: 5,
+                display: "flex", alignItems: "center", gap: 4,
               }}
             >
-              {showSubmit ? <><X size={13} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={13} strokeWidth={2} /> พิมพ์</>}
+              {showSubmit ? <><X size={12} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={12} strokeWidth={2} /> พิมพ์</>}
             </button>
             <button
               onClick={() => { setShowDrawing(true); setShowSubmit(false); }}
               style={{
                 background: "rgba(255,255,255,0.1)",
                 color: "#f9f4eb", border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 20, padding: "7px 12px", fontSize: 13, fontWeight: 700,
+                borderRadius: 20, padding: "6px 10px", fontSize: 12, fontWeight: 700,
                 cursor: "pointer", transition: "background 0.2s",
                 fontFamily: "'Sarabun', sans-serif", whiteSpace: "nowrap",
-                display: "flex", alignItems: "center", gap: 5,
+                display: "flex", alignItems: "center", gap: 4,
               }}
             >
-              <Pen size={13} strokeWidth={2} /> เขียน
+              <Pen size={12} strokeWidth={2} /> เขียน
             </button>
           </div>
         )}
