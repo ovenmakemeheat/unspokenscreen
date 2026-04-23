@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { env } from "@unspokenscreen/env/web";
 import { useCountUp } from "./shared";
 import { ImageIcon } from "lucide-react";
 
@@ -45,7 +46,7 @@ type WordCloudQuestion = {
   count: number;
 };
 
-const API = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3000";
+const API = env.NEXT_PUBLIC_SERVER_URL;
 
 // ── Animated pressure bar ─────────────────────────────────────
 function AnimatedBar({
