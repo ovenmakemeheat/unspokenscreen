@@ -39,7 +39,7 @@ export function Footer() {
             color: "rgba(249,244,235,0.25)",
           }}
         >
-          The Unspoken Screen · หน้าจอที่อยากให้ครอบครัวเห็น
+          The Unspoken Screen · หน้าจอที่อยากให้ครอบครัวได้ยิน
         </div>
 
         <div style={{ display: "flex", gap: 24 }}>
