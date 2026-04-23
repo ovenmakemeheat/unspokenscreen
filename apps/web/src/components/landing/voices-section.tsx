@@ -35,11 +35,11 @@ export function VoicesSection() {
   return (
     <section id="voices" className="bg-us-burg py-20 px-10 relative overflow-hidden">
       {/* Decorative large quote mark */}
-      <div className="absolute -top-5 left-8 text-[220px] text-white/[0.04] leading-none select-none pointer-events-none font-serif">
+      <div className="absolute -top-5 left-8 text-[220px] text-white/4 leading-none select-none pointer-events-none font-serif">
         &ldquo;
       </div>
 
-      <div className="max-w-[760px] mx-auto relative">
+      <div className="max-w-190 mx-auto relative">
         <p className="text-[11px] tracking-[3px] uppercase text-us-cream/45 mb-3 font-semibold">
           เสียงสะท้อนจากพื้นที่จริง
         </p>
@@ -51,7 +51,7 @@ export function VoicesSection() {
         </h2>
 
         {/* Quote card */}
-        <div className="bg-white/[0.07] rounded-xl px-10 py-9 border-l-4 border-us-orange min-h-[140px]">
+        <div className="bg-white/[0.07] rounded-xl px-10 py-9 border-l-4 border-us-orange min-h-35">
           <p className="italic text-[clamp(16px,2.5vw,21px)] text-us-cream leading-[1.85] mb-5">
             &ldquo;{QUOTES[idx].text}&rdquo;
           </p>

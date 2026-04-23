@@ -34,7 +34,7 @@ function AnimatedStat({ value, suffix = "%", label, sub }: StatProps) {
   }, [value]);
 
   return (
-    <div ref={ref} className="bg-us-surface rounded-xl px-6 py-7 shadow-sm flex-1 min-w-[160px]">
+    <div ref={ref} className="bg-us-surface rounded-xl px-6 py-7 shadow-sm flex-1 min-w-40">
       <div className="text-[clamp(40px,6vw,58px)] font-bold text-us-orange leading-none">
         {count}{suffix}
       </div>
@@ -51,7 +51,7 @@ function AnimatedStat({ value, suffix = "%", label, sub }: StatProps) {
 export function ProblemSection() {
   return (
     <section id="problem" className="bg-us-bg py-20 px-10">
-      <div className="max-w-[960px] mx-auto">
+      <div className="max-w-240 mx-auto">
         <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
           ที่มาและความสำคัญ
         </p>
@@ -60,7 +60,7 @@ export function ProblemSection() {
           ปัญหานี้ไม่ได้ไกลตัว
         </h2>
 
-        <p className="text-[16px] text-us-text leading-[1.85] max-w-[680px] mb-14">
+        <p className="text-[16px] text-us-text leading-[1.85] max-w-170 mb-14">
           ผลสำรวจจาก 15 มหาวิทยาลัยทั่วประเทศไทยเผยให้เห็นภาพที่น่ากังวล
           สาเหตุหลักของความเครียดสะสม คือ{" "}
           <strong className="text-us-burg">&ldquo;ความคาดหวังของครอบครัว&rdquo;</strong>{" "}

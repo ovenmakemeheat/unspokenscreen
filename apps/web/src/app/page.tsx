@@ -7,7 +7,7 @@ import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
   return (
-    <main className="overflow-x-hidden font-[var(--font-sarabun)]">
+    <main className="overflow-x-hidden font-(--font-sarabun)">
       <Hero />
       <ProblemSection />
       <VoicesSection />

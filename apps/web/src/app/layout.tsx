@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning>
       <body
-        className={`${sarabun.variable} ${lora.variable} ${patrickHand.variable} ${mali.variable} antialiased font-[var(--font-sarabun)]`}
+        className={`${sarabun.variable} ${lora.variable} ${patrickHand.variable} ${mali.variable} antialiased font-(--font-sarabun)`}
       >
         <Providers>{children}</Providers>
       </body>

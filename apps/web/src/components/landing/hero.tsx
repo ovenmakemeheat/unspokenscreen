@@ -29,7 +29,7 @@ export function Hero() {
   return (
     <section id="hero" className="min-h-screen bg-us-dark flex flex-col relative overflow-hidden">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-10 h-[60px] bg-us-blue shrink-0">
+      <nav className="flex items-center justify-between px-10 h-15 bg-us-blue shrink-0">
         <span className="text-us-cream text-[15px] font-bold tracking-[0.3px]">
           Unspoken Screen
         </span>
@@ -42,7 +42,7 @@ export function Hero() {
           ].map(([label, href]) => (
             <Link
               key={label}
-              href={href}
+              href={href as string}
               className="text-us-cream/80 text-[13px] no-underline hover:text-us-cream transition-colors duration-150"
             >
               {label}
@@ -52,7 +52,7 @@ export function Hero() {
       </nav>
 
       {/* Hero body */}
-      <div className="flex-1 flex flex-col items-start justify-center px-10 pt-20 pb-16 max-w-[760px] mx-auto w-full">
+      <div className="flex-1 flex flex-col items-start justify-center px-10 pt-20 pb-16 max-w-190 mx-auto w-full">
         {/* Eyebrow */}
         <p className="text-us-orange text-[11px] tracking-[4px] uppercase mb-4 font-semibold">
           หน้าจอที่อยากให้ครอบครัวเห็น
@@ -68,7 +68,7 @@ export function Hero() {
 
         {/* Rotating quote */}
         <div
-          className="text-us-cream/70 text-[clamp(14px,2vw,17px)] leading-[1.8] mb-9 min-h-[52px] italic border-l-2 border-us-orange/50 pl-4 transition-opacity duration-300"
+          className="text-us-cream/70 text-[clamp(14px,2vw,17px)] leading-[1.8] mb-9 min-h-13 italic border-l-2 border-us-orange/50 pl-4 transition-opacity duration-300"
           style={{ opacity: visible ? 1 : 0 }}
         >
           &ldquo;{QUOTES[quoteIdx]}&rdquo;
@@ -82,7 +82,7 @@ export function Hero() {
             สำรวจเว็บไซต์
           </Link>
           <Link
-            href="/wall"
+            href={"/wall" as string}
             className="bg-transparent text-us-cream/85 border-2 border-us-cream/40 rounded-full px-7 py-3 text-[15px] no-underline hover:border-us-cream/70 hover:text-us-cream transition-all duration-200"
           >
             กำแพงนิรนาม →
@@ -96,7 +96,7 @@ export function Hero() {
       </svg>
 
       {/* Scroll hint */}
-      <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-35">
+      <div className="absolute bottom-18 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-35">
         <span className="text-us-cream text-[10px] tracking-[3px] uppercase">scroll</span>
         <ChevronDown size={18} color="var(--us-cream, #f9f4eb)" strokeWidth={1.5} />
       </div>
