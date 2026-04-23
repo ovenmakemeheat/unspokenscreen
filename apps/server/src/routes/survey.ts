@@ -63,7 +63,7 @@ router.openapi(
       200: { description: "Summary", content: { "application/json": { schema: SummarySchema } } },
     },
   }),
-  (c) => c.json(getSummary())
+  async (c) => c.json(getSummary())
 );
 
 // ── GET /api/survey/scale ─────────────────────────────────────
@@ -77,7 +77,7 @@ router.openapi(
       200: { description: "Scale questions", content: { "application/json": { schema: z.array(ScaleQuestionSchema) } } },
     },
   }),
-  (c) => c.json(getAllScaleQuestions())
+  async (c) => c.json(getAllScaleQuestions())
 );
 
 // ── GET /api/survey/open ──────────────────────────────────────
@@ -92,7 +92,7 @@ router.openapi(
       200: { description: "Open questions", content: { "application/json": { schema: z.array(OpenQuestionSchema) } } },
     },
   }),
-  (c) => c.json(getAllOpenQuestions())
+  async (c) => c.json(getAllOpenQuestions())
 );
 
 // ── GET /api/survey/choices ───────────────────────────────────
@@ -114,7 +114,7 @@ router.openapi(
       200: { description: "Choice questions", content: { "application/json": { schema: z.array(ChoiceQuestionSchema) } } },
     },
   }),
-  (c) => c.json(getAllChoiceQuestions())
+  async (c) => c.json(getAllChoiceQuestions())
 );
 
 // ── GET /api/survey/scale/:id  (plain route — 404 needs no type gymnastics)
