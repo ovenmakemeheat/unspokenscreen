@@ -1,24 +1,67 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ImageIcon } from "lucide-react";
 
-// Bar chart data — stress causes from the survey
-const STRESS_CAUSES = [
-  { label: "ความคาดหวังของครอบครัว", pct: 80 },
-  { label: "ความกดดันด้านผลการเรียน", pct: 74 },
-  { label: "ความไม่แน่ใจในอนาคต", pct: 68 },
-  { label: "ปัญหาการเงิน", pct: 51 },
-  { label: "ความสัมพันธ์กับเพื่อน", pct: 38 },
-];
+// ── Types mirroring the API ───────────────────────────────────
+type SummaryData = {
+  totalResponses: number;
+  yearBreakdown: Record<string, number>;
+  keyStats: {
+    avgFamilyUnderstanding: number;
+    avgGradeExpectation: number;
+    avgFearOfTruth: number;
+    avgSelfWorthImpact: number;
+    avgStressImpact: number;
+    avgLostIdentity: number;
+    avgNotSafeSpace: number;
+    avgFamilyListens: number;
+    avgLoneliness: number;
+    avgConditionalLove: number;
+  };
+};
 
-// Pie/donut data — mental health breakdown
-const MH_BREAKDOWN = [
-  { label: "ปกติ", pct: 66, color: "var(--us-blue)" },
-  { label: "เครียด/ซึมเศร้า", pct: 30, color: "var(--us-orange)" },
-  { label: "วิกฤต", pct: 4, color: "var(--us-burg)" },
-];
+type ScaleQuestion = {
+  id: string;
+  questionTh: string;
+  average: number;
+  count: number;
+  distribution: Record<string, number>;
+};
 
-function AnimatedBar({ label, pct, delay }: { label: string; pct: number; delay: number }) {
+type ChoiceQuestion = {
+  id: string;
+  questionTh: string;
+  type: "category";
+  total: number;
+  choices: { label: string; count: number }[];
+};
+
+type WordCloudQuestion = {
+  id: string;
+  questionTh: string;
+  wordcloudImageUrl: string | null;
+  count: number;
+};
+
+const API = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:3000";
+
+// ── Animated pressure bar ─────────────────────────────────────
+function AnimatedBar({
+  label,
+  value,
+  max,
+  colorClass,
+  delay,
+  suffix = "",
+}: {
+  label: string;
+  value: number;
+  max: number;
+  colorClass: string;
+  delay: number;
+  suffix?: string;
+}) {
   const [width, setWidth] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -35,7 +78,7 @@ function AnimatedBar({ label, pct, delay }: { label: string; pct: number; delay:
             const animate = (now: number) => {
               const p = Math.min((now - start) / 900, 1);
               const ease = 1 - Math.pow(1 - p, 3);
-              setWidth(ease * pct);
+              setWidth(ease * (value / max) * 100);
               if (p < 1) requestAnimationFrame(animate);
             };
             requestAnimationFrame(animate);
@@ -46,297 +89,287 @@ function AnimatedBar({ label, pct, delay }: { label: string; pct: number; delay:
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [pct, delay]);
+  }, [value, max, delay]);
 
   return (
-    <div ref={ref} style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 5,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: 13,
-            color: "var(--us-dark)",
-          }}
-        >
-          {label}
-        </span>
-        <span
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: 13,
-            fontWeight: 700,
-            color: "var(--us-orange)",
-          }}
-        >
-          {Math.round(width)}%
+    <div ref={ref} className="mb-3.5">
+      <div className="flex justify-between mb-1.5 gap-2">
+        <span className="text-[13px] text-us-dark leading-snug flex-1">{label}</span>
+        <span className={`text-[13px] font-bold shrink-0 ${colorClass}`}>
+          {value.toFixed(1)}{suffix}
         </span>
       </div>
-      <div
-        style={{
-          height: 10,
-          background: "rgba(47,89,122,0.12)",
-          borderRadius: 5,
-          overflow: "hidden",
-        }}
-      >
+      <div className="h-2 bg-us-blue/10 rounded-full overflow-hidden">
         <div
-          style={{
-            height: "100%",
-            width: `${width}%`,
-            background: `linear-gradient(90deg, var(--us-blue), var(--us-orange))`,
-            borderRadius: 5,
-            transition: "width 0.05s linear",
-          }}
+          className={`h-full rounded-full transition-[width] duration-[50ms] ${colorClass.replace("text-", "bg-")}`}
+          style={{ width: `${width}%` }}
         />
       </div>
     </div>
   );
 }
 
-function DonutChart() {
-  const size = 180;
-  const r = 70;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * r;
+// ── Distribution bar chart (1–5 scale) ───────────────────────
+function DistributionChart({ dist, avg }: { dist: Record<string, number>; avg: number }) {
+  const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  const max = Math.max(...Object.values(dist), 1);
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-1 items-end h-12">
+        {[1, 2, 3, 4, 5].map((v) => {
+          const count = dist[String(v)] ?? 0;
+          const h = (count / max) * 44;
+          return (
+            <div key={v} className="flex-1 flex flex-col items-center gap-0.5">
+              <div
+                className={`w-full rounded-t-sm ${v >= 4 ? "bg-us-orange" : "bg-us-blue"}`}
+                style={{
+                  height: h,
+                  opacity: 0.75 + (v / 5) * 0.25,
+                  minHeight: count > 0 ? 2 : 0,
+                }}
+              />
+              <span className="text-[10px] text-us-muted">{v}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-us-muted text-right">
+        เฉลี่ย {avg.toFixed(2)} / 5 · {total} คน
+      </p>
+    </div>
+  );
+}
 
-  let cumulative = 0;
-  const segments = MH_BREAKDOWN.map((d) => {
-    const offset = circumference * (1 - cumulative / 100);
-    const dasharray = `${(d.pct / 100) * circumference} ${circumference}`;
-    cumulative += d.pct;
-    return { ...d, offset, dasharray };
-  });
+// ── Choice bar chart ──────────────────────────────────────────
+const CHOICE_COLORS = [
+  "bg-us-blue text-us-blue",
+  "bg-us-burg text-us-burg",
+  "bg-us-orange text-us-orange",
+  "bg-us-blue text-us-blue",
+  "bg-us-burg text-us-burg",
+  "bg-us-orange text-us-orange",
+];
+
+function ChoiceChart({ question }: { question: ChoiceQuestion }) {
+  const max = Math.max(...question.choices.map((c) => c.count), 1);
+  const shown = question.choices.slice(0, 6);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
-      <svg width={size} height={size}>
-        {segments.map((seg) => (
-          <circle
-            key={seg.label}
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={28}
-            strokeDasharray={seg.dasharray}
-            strokeDashoffset={seg.offset}
-            style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
-          />
-        ))}
-        {/* Center text */}
-        <text
-          x={cx}
-          y={cy - 6}
-          textAnchor="middle"
-          fontFamily="var(--font-sarabun), sans-serif"
-          fontSize={13}
-          fill="var(--us-dark)"
-          fontWeight={700}
-        >
-          นักศึกษา
-        </text>
-        <text
-          x={cx}
-          y={cy + 12}
-          textAnchor="middle"
-          fontFamily="var(--font-sarabun), sans-serif"
-          fontSize={11}
-          fill="var(--us-muted)"
-        >
-          15 มหาวิทยาลัย
-        </text>
-      </svg>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {MH_BREAKDOWN.map((d) => (
-          <div key={d.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 3,
-                background: d.color,
-                flexShrink: 0,
-              }}
-            />
-            <span
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 13,
-                color: "var(--us-dark)",
-              }}
-            >
-              {d.label}
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 13,
-                fontWeight: 700,
-                color: d.color,
-              }}
-            >
-              {d.pct}%
-            </span>
-          </div>
-        ))}
+    <div className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+      <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
+        {question.questionTh}
+      </p>
+      <div className="flex flex-col gap-2">
+        {shown.map((c, i) => {
+          const pct = Math.round((c.count / question.total) * 100);
+          const barW = (c.count / max) * 100;
+          const [bgClass, textClass] = CHOICE_COLORS[i % CHOICE_COLORS.length].split(" ");
+          return (
+            <div key={c.label}>
+              <div className="flex justify-between mb-0.5 gap-2">
+                <span className="text-[11px] text-us-dark leading-snug flex-1">
+                  {c.label.length > 55 ? c.label.slice(0, 52) + "…" : c.label}
+                </span>
+                <span className={`text-[11px] font-bold shrink-0 ${textClass}`}>{pct}%</span>
+              </div>
+              <div className="h-1.5 bg-us-blue/[0.08] rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${bgClass}`} style={{ width: `${barW}%` }} />
+              </div>
+            </div>
+          );
+        })}
+        <p className="text-[10px] text-us-muted text-right mt-0.5">{question.total} คำตอบ</p>
       </div>
     </div>
   );
 }
 
-export function DataSection() {
+// ── Word cloud card ───────────────────────────────────────────
+function WordCloudCard({ question }: { question: WordCloudQuestion }) {
   return (
-    <section
-      id="data"
-      style={{
-        background: "var(--us-surface)",
-        padding: "80px 40px",
-      }}
-    >
-      <div style={{ maxWidth: 960, margin: "0 auto" }}>
-        <div
-          style={{
-            fontFamily: "var(--font-patrick-hand), cursive",
-            fontSize: 11,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color: "var(--us-muted)",
-            marginBottom: 12,
-          }}
-        >
-          ข้อมูลและหลักฐานเชิงประจักษ์
+    <div className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+      <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
+        {question.questionTh}
+      </p>
+      {question.wordcloudImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={question.wordcloudImageUrl}
+          alt={`Word cloud: ${question.questionTh}`}
+          className="w-full rounded-md object-contain"
+        />
+      ) : (
+        <div className="h-[130px] flex flex-col items-center justify-center gap-2 bg-us-blue/[0.04] rounded-md border-2 border-dashed border-us-blue/[0.15]">
+          <ImageIcon size={24} color="rgba(47,89,122,0.3)" strokeWidth={1.5} />
+          <span className="text-[11px] text-us-muted text-center">
+            Word Cloud<br />
+            <span className="opacity-60">{question.count} คำตอบ</span>
+          </span>
         </div>
+      )}
+    </div>
+  );
+}
 
-        <h2
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: "clamp(24px, 3.5vw, 38px)",
-            fontWeight: 700,
-            color: "var(--us-dark)",
-            marginBottom: 12,
-          }}
-        >
+// ── Main section ──────────────────────────────────────────────
+export function DataSection() {
+  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [scaleQuestions, setScaleQuestions] = useState<ScaleQuestion[]>([]);
+  const [choiceQuestions, setChoiceQuestions] = useState<ChoiceQuestion[]>([]);
+  const [wordcloudQuestions, setWordcloudQuestions] = useState<WordCloudQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API}/api/survey/summary`).then((r) => r.json()),
+      fetch(`${API}/api/survey/scale`).then((r) => r.json()),
+      fetch(`${API}/api/survey/choices`).then((r) => r.json()),
+      fetch(`${API}/api/survey/open`).then((r) => r.json()),
+    ])
+      .then(([s, sc, ch, op]) => {
+        setSummary(s);
+        setScaleQuestions(sc);
+        setChoiceQuestions(ch);
+        setWordcloudQuestions(
+          (op as Array<{ id: string; questionTh: string; wordcloudImageUrl: string | null; count: number }>)
+            .filter((q) => q.id === "a9" || q.id === "camp")
+        );
+        setLoading(false);
+      })
+      .catch(() => { setError(true); setLoading(false); });
+  }, []);
+
+  const pressureStats = summary
+    ? [
+        { label: "ครอบครัวคาดหวังเกรดสูง", value: summary.keyStats.avgGradeExpectation, colorClass: "text-us-orange" },
+        { label: "กลัวบอกความจริงกับที่บ้าน", value: summary.keyStats.avgFearOfTruth, colorClass: "text-us-burg" },
+        { label: "Self-worth ลดเมื่อผลเรียนแย่", value: summary.keyStats.avgSelfWorthImpact, colorClass: "text-us-burg" },
+        { label: "ความเครียดส่งผลต่อชีวิต", value: summary.keyStats.avgStressImpact, colorClass: "text-us-orange" },
+        { label: "รู้สึกสูญเสียความเป็นตัวเอง", value: summary.keyStats.avgLostIdentity, colorClass: "text-us-blue" },
+        { label: "ครอบครัวไม่ใช่พื้นที่ปลอดภัย", value: summary.keyStats.avgNotSafeSpace, colorClass: "text-us-blue" },
+        { label: "รู้สึกโดดเดี่ยว", value: summary.keyStats.avgLoneliness, colorClass: "text-us-burg" },
+        { label: "รักมีเงื่อนไข (เมื่อสำเร็จ)", value: summary.keyStats.avgConditionalLove, colorClass: "text-us-orange" },
+      ]
+    : [];
+
+  const detailScaleIds = ["a3", "b1", "b2", "c5", "c7"];
+  const detailScales = scaleQuestions.filter((q) => detailScaleIds.includes(q.id));
+
+  return (
+    <section id="data" className="bg-us-surface py-20 px-10">
+      <div className="max-w-[960px] mx-auto">
+
+        {/* Header */}
+        <p className="text-[11px] tracking-[3px] uppercase text-us-muted mb-3 font-semibold">
+          ข้อมูลและหลักฐานเชิงประจักษ์
+        </p>
+        <h2 className="text-[clamp(24px,3.5vw,38px)] font-bold text-us-dark mb-3">
           ตัวเลขที่ซ่อนอยู่ใต้ผลการเรียน
         </h2>
-
-        <p
-          style={{
-            fontFamily: "var(--font-lora), Georgia, serif",
-            fontStyle: "italic",
-            fontSize: 15,
-            color: "var(--us-muted)",
-            marginBottom: 52,
-            maxWidth: 560,
-            lineHeight: 1.7,
-          }}
-        >
+        <p className="italic text-[15px] text-us-muted mb-14 max-w-[560px] leading-[1.7]">
           ลูกของคุณไม่ได้เหนื่อยอยู่คนเดียว — นี่คือปัญหาร่วมกันของทั้งรุ่น
         </p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 40,
-          }}
-        >
-          {/* Bar chart */}
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--us-blue)",
-                marginBottom: 20,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              สาเหตุหลักของความเครียด
+        {loading && (
+          <p className="text-[14px] text-us-muted mb-10">กำลังโหลดข้อมูล...</p>
+        )}
+
+        {error && (
+          <div className="bg-us-burg/[0.06] border border-us-burg/20 rounded-lg px-[18px] py-3.5 text-[13px] text-us-burg mb-10">
+            ไม่สามารถโหลดข้อมูลจาก API ได้ — ตรวจสอบว่า server กำลังรันอยู่ที่ {API}
+          </div>
+        )}
+
+        {/* ── Summary total ── */}
+        {summary && (
+          <div className="bg-us-dark rounded-xl px-7 py-6 mb-10 flex items-center gap-6 flex-wrap">
+            <div>
+              <div className="text-[clamp(36px,5vw,52px)] font-bold text-us-orange leading-none">
+                {summary.totalResponses}
+              </div>
+              <p className="text-[13px] text-us-cream/60 mt-1">ผู้ตอบแบบสอบถาม</p>
             </div>
-            {STRESS_CAUSES.map((item, i) => (
+            <div className="w-px h-12 bg-white/10 shrink-0" />
+            <div className="flex gap-4 flex-wrap">
+              {Object.entries(summary.yearBreakdown).map(([year, count]) => (
+                <div key={year} className="text-center">
+                  <div className="text-[20px] font-bold text-us-cream">{count}</div>
+                  <div className="text-[11px] text-us-cream/45">{year}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Pressure score bars ── */}
+        {summary && (
+          <div className="mb-14">
+            <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
+              คะแนนเฉลี่ย (สเกล 1–5) จากผู้ตอบ {summary.totalResponses} คน
+            </p>
+            {pressureStats.map((s, i) => (
               <AnimatedBar
-                key={item.label}
-                label={item.label}
-                pct={item.pct}
-                delay={i * 120}
+                key={s.label}
+                label={s.label}
+                value={s.value}
+                max={5}
+                colorClass={s.colorClass}
+                delay={i * 80}
+                suffix=" / 5"
               />
             ))}
           </div>
+        )}
 
-          {/* Donut */}
-          <div>
-            <div
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--us-blue)",
-                marginBottom: 20,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              สภาวะสุขภาพจิตนักศึกษา
-            </div>
-            <DonutChart />
-            <p
-              style={{
-                fontFamily: "var(--font-sarabun), sans-serif",
-                fontSize: 12,
-                color: "var(--us-muted)",
-                marginTop: 20,
-                lineHeight: 1.6,
-              }}
-            >
-              * ข้อมูลจากการสำรวจนักศึกษา 15 มหาวิทยาลัยทั่วประเทศไทย
-              โดยส่วนนี้จะได้รับการอัปเดตด้วยข้อมูลจาก Google Form ของโปรเจกต์
+        {/* ── Detailed distribution charts (scale 1–5) ── */}
+        {detailScales.length > 0 && (
+          <div className="mb-14">
+            <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
+              การกระจายคำตอบ (1 = น้อยมาก · 5 = มากที่สุด)
             </p>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
+              {detailScales.map((q) => (
+                <div key={q.id} className="bg-white rounded-xl px-4 py-[18px] shadow-sm">
+                  <p className="text-[12px] font-semibold text-us-dark mb-3.5 leading-snug">
+                    {q.questionTh}
+                  </p>
+                  <DistributionChart dist={q.distribution} avg={q.average} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Placeholder for charts from Google Form */}
-        <div
-          style={{
-            marginTop: 48,
-            background: "rgba(47,89,122,0.06)",
-            border: "2px dashed rgba(47,89,122,0.2)",
-            borderRadius: 10,
-            padding: "32px 24px",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-sarabun), sans-serif",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "var(--us-blue)",
-              marginBottom: 6,
-            }}
-          >
-            พื้นที่สำหรับกราฟจาก Google Form
+        {/* ── Choice bar charts ── */}
+        {choiceQuestions.length > 0 && (
+          <div className="mb-14">
+            <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
+              คำตอบแบบเลือก — ความถี่ที่พบมากที่สุด
+            </p>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+              {choiceQuestions.map((q) => (
+                <ChoiceChart key={q.id} question={q} />
+              ))}
+            </div>
           </div>
-          <div
-            style={{
-              fontFamily: "var(--font-sarabun), sans-serif",
-              fontSize: 13,
-              color: "var(--us-muted)",
-            }}
-          >
-            Word cloud · Bar plot · Pie chart · และข้อมูลเชิงลึกอื่นๆ จากการเก็บข้อมูลจริง
+        )}
+
+        {/* ── Word clouds ── */}
+        {wordcloudQuestions.length > 0 && (
+          <div>
+            <p className="text-[14px] font-bold text-us-blue uppercase tracking-[0.5px] mb-5">
+              เสียงจากผู้ตอบ — Word Cloud
+            </p>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5">
+              {wordcloudQuestions.map((q) => (
+                <WordCloudCard key={q.id} question={q} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
       </div>
     </section>
   );

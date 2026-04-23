@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Sarabun, Lora, Patrick_Hand } from "next/font/google";
+import { Sarabun, Lora, Patrick_Hand, Mali } from "next/font/google";
 
 import "../index.css";
 import Providers from "@/components/providers";
@@ -22,6 +22,13 @@ const patrickHand = Patrick_Hand({
   weight: "400",
 });
 
+const mali = Mali({
+  variable: "--font-mali",
+  subsets: ["latin", "thai"],
+  weight: ["200", "300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "The Unspoken Screen — หน้าจอที่อยากให้ครอบครัวเห็น",
   description:
@@ -36,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning>
       <body
-        className={`${sarabun.variable} ${lora.variable} ${patrickHand.variable} antialiased`}
+        className={`${sarabun.variable} ${lora.variable} ${patrickHand.variable} ${mali.variable} antialiased font-[var(--font-sarabun)]`}
       >
         <Providers>{children}</Providers>
       </body>

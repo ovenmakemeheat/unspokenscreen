@@ -33,160 +33,64 @@ export function VoicesSection() {
   const next = () => setIdx((i) => (i + 1) % QUOTES.length);
 
   return (
-    <section
-      id="voices"
-      style={{
-        background: "var(--us-burg)",
-        padding: "80px 40px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <section id="voices" className="bg-us-burg py-20 px-10 relative overflow-hidden">
       {/* Decorative large quote mark */}
-      <div
-        style={{
-          position: "absolute",
-          top: -20,
-          left: 32,
-          fontFamily: "var(--font-lora), Georgia, serif",
-          fontSize: 220,
-          color: "rgba(255,255,255,0.04)",
-          lineHeight: 1,
-          userSelect: "none",
-          pointerEvents: "none",
-        }}
-      >
+      <div className="absolute -top-5 left-8 text-[220px] text-white/[0.04] leading-none select-none pointer-events-none font-serif">
         &ldquo;
       </div>
 
-      <div style={{ maxWidth: 760, margin: "0 auto", position: "relative" }}>
-        <div
-          style={{
-            fontFamily: "var(--font-patrick-hand), cursive",
-            fontSize: 11,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color: "rgba(249,244,235,0.45)",
-            marginBottom: 12,
-          }}
-        >
+      <div className="max-w-[760px] mx-auto relative">
+        <p className="text-[11px] tracking-[3px] uppercase text-us-cream/45 mb-3 font-semibold">
           เสียงสะท้อนจากพื้นที่จริง
-        </div>
+        </p>
 
-        <h2
-          style={{
-            fontFamily: "var(--font-sarabun), sans-serif",
-            fontSize: "clamp(22px, 3.5vw, 34px)",
-            fontWeight: 700,
-            color: "#f9f4eb",
-            marginBottom: 44,
-          }}
-        >
+        <h2 className="text-[clamp(22px,3.5vw,34px)] font-bold text-us-cream mb-11">
           สิ่งที่นักศึกษาอยากบอก
           <br />
-          <span style={{ color: "var(--us-orange)" }}>แต่ยังพูดไม่ออก</span>
+          <span className="text-us-orange">แต่ยังพูดไม่ออก</span>
         </h2>
 
         {/* Quote card */}
-        <div
-          style={{
-            background: "rgba(249,244,235,0.07)",
-            borderRadius: 12,
-            padding: "36px 40px",
-            borderLeft: "4px solid var(--us-orange)",
-            minHeight: 140,
-            transition: "opacity 0.3s",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-lora), Georgia, serif",
-              fontStyle: "italic",
-              fontSize: "clamp(16px, 2.5vw, 21px)",
-              color: "#f9f4eb",
-              lineHeight: 1.85,
-              marginBottom: 20,
-            }}
-          >
+        <div className="bg-white/[0.07] rounded-xl px-10 py-9 border-l-4 border-us-orange min-h-[140px]">
+          <p className="italic text-[clamp(16px,2.5vw,21px)] text-us-cream leading-[1.85] mb-5">
             &ldquo;{QUOTES[idx].text}&rdquo;
-          </div>
-          <div
-            style={{
-              fontFamily: "var(--font-patrick-hand), cursive",
-              fontSize: 12,
-              color: "rgba(249,244,235,0.45)",
-              letterSpacing: 0.5,
-            }}
-          >
+          </p>
+          <p className="text-[12px] text-us-cream/45 tracking-[0.5px]">
             — {QUOTES[idx].label}
-          </div>
+          </p>
         </div>
 
         {/* Controls */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 24,
-          }}
-        >
+        <div className="flex items-center justify-between mt-6">
           {/* Dots */}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             {QUOTES.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setIdx(i)}
+                className="h-2 rounded-full border-none cursor-pointer p-0 transition-all duration-200"
                 style={{
                   width: i === idx ? 24 : 8,
-                  height: 8,
-                  borderRadius: 4,
                   background: i === idx ? "var(--us-orange)" : "rgba(249,244,235,0.25)",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "all 0.2s",
                 }}
               />
             ))}
           </div>
 
           {/* Arrows */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={prev}
-              style={{
-                background: "rgba(249,244,235,0.1)",
-                border: "1px solid rgba(249,244,235,0.2)",
-                borderRadius: "50%",
-                width: 36,
-                height: 36,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#f9f4eb",
-              }}
-            >
-              <ChevronLeft size={16} strokeWidth={2} />
-            </button>
-            <button
-              onClick={next}
-              style={{
-                background: "rgba(249,244,235,0.1)",
-                border: "1px solid rgba(249,244,235,0.2)",
-                borderRadius: "50%",
-                width: 36,
-                height: 36,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#f9f4eb",
-              }}
-            >
-              <ChevronRight size={16} strokeWidth={2} />
-            </button>
+          <div className="flex gap-2">
+            {[
+              { fn: prev, Icon: ChevronLeft },
+              { fn: next, Icon: ChevronRight },
+            ].map(({ fn, Icon }, i) => (
+              <button
+                key={i}
+                onClick={fn}
+                className="bg-white/10 border border-white/20 rounded-full w-9 h-9 flex items-center justify-center cursor-pointer text-us-cream hover:bg-white/20 transition-colors duration-150"
+              >
+                <Icon size={16} strokeWidth={2} />
+              </button>
+            ))}
           </div>
         </div>
       </div>
