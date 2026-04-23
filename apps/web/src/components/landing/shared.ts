@@ -1,12 +1,6 @@
-import { type RefObject, useEffect, useRef, useState } from "react";
-import type { Route } from "next";
+"use client";
 
-export const NAV_LINKS: [string, Route][] = [
-  ["ปัญหา", "#problem" as Route],
-  ["เสียงจากใจ", "#voices" as Route],
-  ["ข้อมูล", "#data" as Route],
-  ["กำแพงนิรนาม", "/wall"],
-];
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 /**
  * Animates a numeric value from 0 to `target` using cubic ease-out once the

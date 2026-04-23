@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Route } from "next";
-import { NAV_LINKS } from "./shared";
+import { NAV_LINKS } from "./nav-links";
 
 const QUOTES = [
   "อยากให้แม่รู้ว่าฉันพยายามอยู่เสมอ",
