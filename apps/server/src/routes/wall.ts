@@ -1,6 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { db, wallNotes, wallReplies, wallUsers } from "@unspokenscreen/db";
 import { desc, eq, sql } from "drizzle-orm";
+import { filterContent } from "../content-filter";
 
 const router = new OpenAPIHono();
 
@@ -194,6 +195,7 @@ router.openapi(
     responses: {
       201: { description: "Note created" },
       401: { description: "Invalid or missing session token" },
+      422: { description: "Content contains inappropriate language" },
     },
   }),
   async (c) => {
@@ -202,6 +204,9 @@ router.openapi(
     if (!user) return c.json({ error: "Invalid or missing session token" }, 401);
 
     const body = CreateNoteSchema.parse(await c.req.json());
+
+    const textCheck = filterContent(body.text);
+    if (textCheck.blocked) return c.json({ error: textCheck.reason }, 422);
 
     const rows = await db
       .insert(wallNotes)
@@ -276,6 +281,7 @@ router.openapi(
       401: { description: "Invalid or missing session token" },
       403: { description: "Forbidden" },
       404: { description: "Not found" },
+      422: { description: "Content contains inappropriate language" },
     },
   }),
   async (c) => {
@@ -296,6 +302,11 @@ router.openapi(
     if (existing[0]!.userId !== user.id) return c.json({ error: "Forbidden" }, 403);
 
     const body = UpdateNoteSchema.parse(await c.req.json());
+
+    if (body.text !== undefined) {
+      const textCheck = filterContent(body.text);
+      if (textCheck.blocked) return c.json({ error: textCheck.reason }, 422);
+    }
 
     const updates: Partial<typeof wallNotes.$inferInsert> = {};
     if (body.text !== undefined) updates.text = body.text;
@@ -417,6 +428,7 @@ router.openapi(
       201: { description: "Reply created" },
       400: { description: "Invalid id" },
       404: { description: "Note not found" },
+      422: { description: "Content contains inappropriate language" },
     },
   }),
   async (c) => {
@@ -424,6 +436,9 @@ router.openapi(
     if (!Number.isInteger(id)) return c.json({ error: "Invalid id" }, 400);
 
     const body = CreateReplySchema.parse(await c.req.json());
+
+    const replyCheck = filterContent(body.text);
+    if (replyCheck.blocked) return c.json({ error: replyCheck.reason }, 422);
 
     const exists = await db
       .select({ id: wallNotes.id })

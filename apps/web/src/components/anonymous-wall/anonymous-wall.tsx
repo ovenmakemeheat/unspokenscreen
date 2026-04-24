@@ -19,12 +19,277 @@ import { ExpandedNote } from "./expanded-note";
 import { AvatarFace, AvatarPicker } from "./avatar";
 import { AVATAR_PRESETS, type AvatarPreset } from "./avatar-store";
 import { DrawingModal } from "./drawing-modal";
+import { toast } from "sonner";
 import { env } from "@unspokenscreen/env/web";
 
 const API = env.NEXT_PUBLIC_SERVER_URL;
 
 const FILTERS = ["ทั้งหมด", "ครอบครัว", "ความเครียด", "ความฝัน", "ขอบคุณ"];
 const TAGS = FILTERS.slice(1);
+
+// Keywords that signal the message is family-related
+const FAMILY_KEYWORDS = [
+  // ── ความสัมพันธ์ในครอบครัว ──────────────────────────────────
+  "ครอบครัว",
+  "พ่อ",
+  "แม่",
+  "พ่อแม่",
+  "พ่อเลี้ยง",
+  "แม่เลี้ยง",
+  "พ่อบุญธรรม",
+  "แม่บุญธรรม",
+  "พี่",
+  "น้อง",
+  "พี่ชาย",
+  "พี่สาว",
+  "น้องชาย",
+  "น้องสาว",
+  "พี่น้อง",
+  "พี่สะใภ้",
+  "น้องสะใภ้",
+  "พี่เขย",
+  "น้องเขย",
+  "ลูก",
+  "ลูกชาย",
+  "ลูกสาว",
+  "ลูกบุญธรรม",
+  "สามี",
+  "ภรรยา",
+  "แฟน",
+  "คู่ชีวิต",
+  "คู่รัก",
+  "ปู่",
+  "ย่า",
+  "ตา",
+  "ยาย",
+  "ทวด",
+  "ลุง",
+  "ป้า",
+  "น้า",
+  "อา",
+  "หลาน",
+  "หลานชาย",
+  "หลานสาว",
+  "เหลน",
+  "ลูกพี่ลูกน้อง",
+  "ญาติ",
+  "ญาติพี่น้อง",
+  "ญาติผู้ใหญ่",
+  "ผู้ปกครอง",
+  "ผู้เลี้ยงดู",
+
+  // ── อารมณ์และความรู้สึกต่อกัน ───────────────────────────────
+  "รัก",
+  "รักมาก",
+  "รักที่สุด",
+  "รักนะ",
+  "รักเขา",
+  "รักเธอ",
+  "คิดถึง",
+  "คิดถึงมาก",
+  "คิดถึงนะ",
+  "ห่วง",
+  "เป็นห่วง",
+  "ห่วงใย",
+  "เป็นห่วงมาก",
+  "ขอบคุณ",
+  "ขอบคุณมาก",
+  "ขอบคุณนะ",
+  "ขอบใจ",
+  "ขอโทษ",
+  "ขอโทษนะ",
+  "ขอโทษด้วย",
+  "โทษ",
+  "ให้อภัย",
+  "อภัย",
+  "ให้อภัยกัน",
+  "ภูมิใจ",
+  "ภูมิใจใน",
+  "ภูมิใจที่สุด",
+  "เหงา",
+  "คิดถึงบ้าน",
+  "โหยหา",
+  "อยากกลับบ้าน",
+  "ทะเลาะ",
+  "ทะเลาะกัน",
+  "คืนดี",
+  "คืนดีกัน",
+  "อิจฉา",
+  "น้อยใจ",
+  "น้อยใจนะ",
+  "น้อยใจมาก",
+  "เสียใจ",
+  "เสียใจมาก",
+  "เสียใจด้วย",
+  "ดีใจ",
+  "ดีใจมาก",
+  "ดีใจที่สุด",
+  "หวัง",
+  "หวังว่า",
+  "ฝัน",
+  "ฝันถึง",
+  "เข้าใจ",
+  "ไม่เข้าใจ",
+  "เข้าใจกัน",
+  "ผูกพัน",
+  "ใกล้ชิด",
+  "สนิท",
+  "สนิทใจ",
+  "ไว้ใจ",
+  "ไว้วางใจ",
+  "เชื่อใจ",
+  "กังวล",
+  "กังวลใจ",
+  "วิตก",
+  "อ้อนหา",
+  "คิดฮอด", // อีสาน
+  "ฮักแพง", // อีสาน: รักใคร่
+  "อยากเห็น",
+  "อยากเจอ",
+  "อยากคุย",
+
+  // ── การกระทำและการดูแล ──────────────────────────────────────
+  "กอด",
+  "อยากกอด",
+  "โอบกอด",
+  "ดูแล",
+  "ดูแลกัน",
+  "ดูแลตัวเอง",
+  "ดูแลด้วย",
+  "เลี้ยงดู",
+  "เลี้ยง",
+  "สั่งสอน",
+  "สนับสนุน",
+  "ให้กำลังใจ",
+  "กำลังใจ",
+  "ช่วย",
+  "ช่วยเหลือ",
+  "ช่วยกัน",
+  "รับฟัง",
+  "ฟัง",
+  "พูดคุย",
+  "คุยกัน",
+  "เคียงข้าง",
+  "อยู่เคียงข้าง",
+  "อยู่ด้วยกัน",
+  "นึกถึง",
+  "ระลึก",
+  "ระลึกถึง",
+  "อวยพร",
+  "พร",
+
+  // ── บ้านและชีวิตร่วมกัน ─────────────────────────────────────
+  "บ้าน",
+  "บ้านเรา",
+  "กลับบ้าน",
+  "อยู่บ้าน",
+  "ที่บ้าน",
+  "อบอุ่น",
+  "ความอบอุ่น",
+  "ความทรงจำ",
+  "ความทรงจำที่ดี",
+  "ทรงจำ",
+  "วันเกิด",
+  "ปีใหม่",
+  "สงกรานต์",
+  "เทศกาล",
+  "ทานข้าว",
+  "กินข้าวด้วยกัน",
+  "โต๊ะอาหาร",
+  "ครอบครัวพร้อมหน้า",
+  "พร้อมหน้า",
+  "พร้อมกัน",
+  "คนในบ้าน",
+  "คนที่รัก",
+  "คนสำคัญ",
+  "คนข้างๆ",
+  "ห่างกัน",
+  "ห่างบ้าน",
+  "อยู่ไกล",
+  "คนละที่",
+
+  // ── ความรู้สึกด้านลบที่เกี่ยวกับความสัมพันธ์ ────────────────
+  "เครียด",
+  "เครียดมาก",
+  "เครียดใจ",
+  "กดดัน",
+  "ความกดดัน",
+  "แรงกดดัน",
+  "อึดอัด",
+  "อึดอัดใจ",
+  "เจ็บปวด",
+  "เจ็บใจ",
+  "ปวดใจ",
+  "บาดเจ็บ",
+  "หนักใจ",
+  "ใจหนัก",
+  "ท้อ",
+  "ท้อแท้",
+  "ท้อใจ",
+  "หมดหวัง",
+  "สิ้นหวัง",
+  "ไม่มีความหวัง",
+  "โกรธ",
+  "โมโห",
+  "ไม่พอใจ",
+  "ขุ่นเคือง",
+  "เบื่อ",
+  "เบื่อหน่าย",
+  "เหนื่อย",
+  "เหนื่อยใจ",
+  "หมดแรง",
+  "ผิดหวัง",
+  "ผิดหวังมาก",
+  "คาดหวัง",
+  "สับสน",
+  "ไม่รู้จะทำยังไง",
+  "หาทางออกไม่ได้",
+  "เดียวดาย",
+  "โดดเดี่ยว",
+  "ไม่มีใคร",
+  "กลัว",
+  "กังวล",
+  "หวาดกลัว",
+  "ไม่กล้า",
+  "แผล",
+  "แผลใจ",
+  "บาดแผล",
+  "ทนไม่ได้",
+  "ทน",
+  "อดทน",
+  "สู้ต่อ",
+  "ซึมเศร้า",
+  "เศร้า",
+  "เศร้าใจ",
+  "เสียน้ำตา",
+  "ร้องไห้",
+  "ทอดทิ้ง",
+  "ถูกทอดทิ้ง",
+  "ถูกทิ้ง",
+  "ไม่ได้รับความรัก",
+  "รู้สึกไม่มีคุณค่า",
+  "ไม่มีคุณค่า",
+  "พลาด",
+  "ล้มเหลว",
+  "ทำให้ผิดหวัง",
+];
+
+function looksLikeFamily(text: string): boolean {
+  const lower = text.toLowerCase();
+  return FAMILY_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+// Rotating family-themed writing prompts shown in the submit panel
+const FAMILY_PROMPTS = [
+  "มีอะไรอยากบอกพ่อหรือแม่ แต่พูดออกมาไม่ได้?",
+  "มีช่วงเวลาไหนที่ครอบครัวทำให้คุณรู้สึกอบอุ่น?",
+  "มีคำขอบคุณที่ยังไม่เคยบอกใครในบ้านไหม?",
+  "สิ่งที่คุณห่วงใยคนในครอบครัวมากที่สุดคืออะไร?",
+  "มีความทรงจำกับครอบครัวที่อยากเก็บไว้ตลอดไปไหม?",
+  "อยากให้ครอบครัวรู้ว่าคุณรู้สึกอย่างไรในตอนนี้?",
+  "มีเรื่องที่อยากขอโทษหรืออยากให้อภัยกันไหม?",
+  "สิ่งที่ทำให้คุณภูมิใจในครอบครัวคืออะไร?",
+];
 
 const FLOAT_CLASSES: NoteData["floatClass"][] = [
   "us-float-a",
@@ -65,6 +330,8 @@ export function AnonymousWall() {
   const [displayName, setDisplayName] = useState("");
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [showMobileSubmit, setShowMobileSubmit] = useState(false);
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [showOffTopicConfirm, setShowOffTopicConfirm] = useState(false);
 
   const MIN_SCALE = 0.3;
   const MAX_SCALE = 2.5;
@@ -85,22 +352,29 @@ export function AnonymousWall() {
   const pinchStartOffset = useRef({ x: 0, y: 0 });
   const pinchMidpoint = useRef({ x: 0, y: 0 });
 
-  useEffect(() => { offsetRef.current = offset; }, [offset]);
-  useEffect(() => { scaleRef.current = scale; }, [scale]);
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
 
-  const applyZoom = useCallback((newScale: number, originX: number, originY: number) => {
-    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-    const prev = scaleRef.current;
-    const ox = offsetRef.current.x;
-    const oy = offsetRef.current.y;
-    // keep the canvas point under (originX, originY) fixed
-    const nx = originX - (originX - ox) * (clamped / prev);
-    const ny = originY - (originY - oy) * (clamped / prev);
-    scaleRef.current = clamped;
-    offsetRef.current = { x: nx, y: ny };
-    setScale(clamped);
-    setOffset({ x: nx, y: ny });
-  }, []);
+  const applyZoom = useCallback(
+    (newScale: number, originX: number, originY: number) => {
+      const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+      const prev = scaleRef.current;
+      const ox = offsetRef.current.x;
+      const oy = offsetRef.current.y;
+      // keep the canvas point under (originX, originY) fixed
+      const nx = originX - (originX - ox) * (clamped / prev);
+      const ny = originY - (originY - oy) * (clamped / prev);
+      scaleRef.current = clamped;
+      offsetRef.current = { x: nx, y: ny };
+      setScale(clamped);
+      setOffset({ x: nx, y: ny });
+    },
+    [],
+  );
 
   // Wheel zoom — attached via addEventListener so we can pass passive:false
   useEffect(() => {
@@ -155,30 +429,42 @@ export function AnonymousWall() {
       body: JSON.stringify({}),
     })
       .then((r) => r.json())
-      .then((data: { token: string; userId: number; displayName: string | null }) => {
-        localStorage.setItem("us_wall_token", data.token);
-        localStorage.setItem("us_wall_user_id", String(data.userId));
-        setUserToken(data.token);
-        setUserId(data.userId);
-      })
+      .then(
+        (data: {
+          token: string;
+          userId: number;
+          displayName: string | null;
+        }) => {
+          localStorage.setItem("us_wall_token", data.token);
+          localStorage.setItem("us_wall_user_id", String(data.userId));
+          setUserToken(data.token);
+          setUserId(data.userId);
+        },
+      )
       .catch(console.error);
   }, []);
 
-  const saveName = useCallback(async (name: string) => {
-    const trimmed = name.trim();
-    localStorage.setItem("us_wall_display_name", trimmed);
-    setDisplayName(trimmed);
-    if (!userToken) return;
-    try {
-      await fetch(`${API}/api/wall/session`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-user-token": userToken },
-        body: JSON.stringify({ name: trimmed }),
-      });
-    } catch (err) {
-      console.error("Failed to update display name:", err);
-    }
-  }, [userToken]);
+  const saveName = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      localStorage.setItem("us_wall_display_name", trimmed);
+      setDisplayName(trimmed);
+      if (!userToken) return;
+      try {
+        await fetch(`${API}/api/wall/session`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-token": userToken,
+          },
+          body: JSON.stringify({ name: trimmed }),
+        });
+      } catch (err) {
+        console.error("Failed to update display name:", err);
+      }
+    },
+    [userToken],
+  );
 
   useEffect(() => {
     fetch(`${API}/api/wall/notes`)
@@ -207,7 +493,7 @@ export function AnonymousWall() {
       dragStart.current = { x: e.clientX, y: e.clientY };
       lastOffset.current = offset;
     },
-    [offset]
+    [offset],
   );
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
@@ -229,7 +515,10 @@ export function AnonymousWall() {
         // pinch start
         const t0 = e.touches[0];
         const t1 = e.touches[1];
-        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const dist = Math.hypot(
+          t1.clientX - t0.clientX,
+          t1.clientY - t0.clientY,
+        );
         pinchStartDist.current = dist;
         pinchStartScale.current = scaleRef.current;
         pinchStartOffset.current = { ...offsetRef.current };
@@ -247,26 +536,33 @@ export function AnonymousWall() {
       dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastOffset.current = offset;
     },
-    [offset]
+    [offset],
   );
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2 && pinchStartDist.current !== null) {
-      e.preventDefault();
-      const t0 = e.touches[0];
-      const t1 = e.touches[1];
-      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-      const newScale = pinchStartScale.current * (dist / pinchStartDist.current);
-      applyZoom(newScale, pinchMidpoint.current.x, pinchMidpoint.current.y);
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist.current !== null) {
+        e.preventDefault();
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const dist = Math.hypot(
+          t1.clientX - t0.clientX,
+          t1.clientY - t0.clientY,
+        );
+        const newScale =
+          pinchStartScale.current * (dist / pinchStartDist.current);
+        applyZoom(newScale, pinchMidpoint.current.x, pinchMidpoint.current.y);
+        didMove.current = true;
+        return;
+      }
+      if (!isDragging.current) return;
+      const dx = e.touches[0].clientX - dragStart.current.x;
+      const dy = e.touches[0].clientY - dragStart.current.y;
       didMove.current = true;
-      return;
-    }
-    if (!isDragging.current) return;
-    const dx = e.touches[0].clientX - dragStart.current.x;
-    const dy = e.touches[0].clientY - dragStart.current.y;
-    didMove.current = true;
-    setOffset({ x: lastOffset.current.x + dx, y: lastOffset.current.y + dy });
-  }, [applyZoom]);
+      setOffset({ x: lastOffset.current.x + dx, y: lastOffset.current.y + dy });
+    },
+    [applyZoom],
+  );
 
   const handleNoteExpand = useCallback((note: NoteData) => {
     if (didMove.current) return;
@@ -310,8 +606,14 @@ export function AnonymousWall() {
       const isClear = (x: number, y: number) => {
         for (const n of notes) {
           const nw = n.width ?? 150;
-          const ox = Math.max(0, Math.min(x + noteWidth, n.x + nw) - Math.max(x, n.x));
-          const oy = Math.max(0, Math.min(y + noteHeight, n.y + NOTE_H) - Math.max(y, n.y));
+          const ox = Math.max(
+            0,
+            Math.min(x + noteWidth, n.x + nw) - Math.max(x, n.x),
+          );
+          const oy = Math.max(
+            0,
+            Math.min(y + noteHeight, n.y + NOTE_H) - Math.max(y, n.y),
+          );
           if (ox * oy > 0) return false;
         }
         return true;
@@ -319,7 +621,10 @@ export function AnonymousWall() {
       candidates.sort((a, b) => a.dist - b.dist);
       for (const { x, y } of candidates) {
         if (isClear(x, y)) {
-          return { x: x + (Math.random() - 0.5) * JITTER, y: y + (Math.random() - 0.5) * JITTER };
+          return {
+            x: x + (Math.random() - 0.5) * JITTER,
+            y: y + (Math.random() - 0.5) * JITTER,
+          };
         }
       }
       let best = candidates[0]!;
@@ -328,15 +633,27 @@ export function AnonymousWall() {
         let totalOverlap = 0;
         for (const n of notes) {
           const nw = n.width ?? 150;
-          const ox = Math.max(0, Math.min(c.x + noteWidth, n.x + nw) - Math.max(c.x, n.x));
-          const oy = Math.max(0, Math.min(c.y + noteHeight, n.y + NOTE_H) - Math.max(c.y, n.y));
+          const ox = Math.max(
+            0,
+            Math.min(c.x + noteWidth, n.x + nw) - Math.max(c.x, n.x),
+          );
+          const oy = Math.max(
+            0,
+            Math.min(c.y + noteHeight, n.y + NOTE_H) - Math.max(c.y, n.y),
+          );
           totalOverlap += ox * oy;
         }
-        if (totalOverlap < bestOverlap) { bestOverlap = totalOverlap; best = c; }
+        if (totalOverlap < bestOverlap) {
+          bestOverlap = totalOverlap;
+          best = c;
+        }
       }
-      return { x: best.x + (Math.random() - 0.5) * JITTER, y: best.y + (Math.random() - 0.5) * JITTER };
+      return {
+        x: best.x + (Math.random() - 0.5) * JITTER,
+        y: best.y + (Math.random() - 0.5) * JITTER,
+      };
     },
-    [notes, offset]
+    [notes, offset],
   );
 
   const postNote = async (text: string, imageData?: string) => {
@@ -366,6 +683,13 @@ export function AnonymousWall() {
       },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg =
+        (err as { error?: string }).error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่";
+      toast.error(msg);
+      throw new Error(msg);
+    }
     const created: NoteData = await res.json();
     setNotes((prev) => [...prev, created]);
     setNewNoteId(created.id);
@@ -375,19 +699,33 @@ export function AnonymousWall() {
     const cw = canvasRef.current?.clientWidth ?? 800;
     const ch = canvasRef.current?.clientHeight ?? 500;
     const s = scaleRef.current;
-    panTo(-(created.x + (created.width ?? 150) / 2) * s + cw / 2, -(created.y + 60) * s + ch / 2);
+    panTo(
+      -(created.x + (created.width ?? 150) / 2) * s + cw / 2,
+      -(created.y + 60) * s + ch / 2,
+    );
     return created;
   };
 
-  const handleSubmit = async () => {
-    if (!inputText.trim()) return;
+  const doSubmit = async () => {
     try {
       await postNote(inputText.trim());
       setInputText("");
       setShowSubmit(false);
-    } catch (err) {
-      console.error("Failed to create note:", err);
+      setShowMobileSubmit(false);
+    } catch {
+      // error already shown via toast — keep input so user can edit
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!inputText.trim()) return;
+    // Skip check when tag already declares family intent
+    if (selectedTag === "ครอบครัว" || looksLikeFamily(inputText)) {
+      await doSubmit();
+      return;
+    }
+    // Text looks off-topic — ask for confirmation
+    setShowOffTopicConfirm(true);
   };
 
   const handleDrawingSubmit = async (imageData: string) => {
@@ -399,35 +737,49 @@ export function AnonymousWall() {
     }
   };
 
-  const handleDelete = useCallback(async (noteId: number) => {
-    if (!userToken) return;
-    try {
-      await fetch(`${API}/api/wall/notes/${noteId}`, {
-        method: "DELETE",
-        headers: { "x-user-token": userToken },
-      });
-      setNotes((prev) => prev.filter((n) => n.id !== noteId));
-    } catch (err) {
-      console.error("Failed to delete note:", err);
-    }
-  }, [userToken]);
+  const handleDelete = useCallback(
+    async (noteId: number) => {
+      if (!userToken) return;
+      try {
+        await fetch(`${API}/api/wall/notes/${noteId}`, {
+          method: "DELETE",
+          headers: { "x-user-token": userToken },
+        });
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      } catch (err) {
+        console.error("Failed to delete note:", err);
+      }
+    },
+    [userToken],
+  );
 
-  const handleEdit = useCallback(async (noteId: number, text: string, tag: string) => {
-    if (!userToken) return;
-    try {
+  const handleEdit = useCallback(
+    async (noteId: number, text: string, tag: string) => {
+      if (!userToken) return;
       const res = await fetch(`${API}/api/wall/notes/${noteId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-user-token": userToken },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-token": userToken,
+        },
         body: JSON.stringify({ text, tag }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg =
+          (err as { error?: string }).error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่";
+        toast.error(msg);
+        throw new Error(msg);
+      }
       const updated = await res.json();
       setNotes((prev) =>
-        prev.map((n) => (n.id === noteId ? { ...n, text: updated.text, tag: updated.tag } : n))
+        prev.map((n) =>
+          n.id === noteId ? { ...n, text: updated.text, tag: updated.tag } : n,
+        ),
       );
-    } catch (err) {
-      console.error("Failed to edit note:", err);
-    }
-  }, [userToken]);
+    },
+    [userToken],
+  );
 
   const handleHeart = useCallback(async (noteId: number) => {
     try {
@@ -438,21 +790,33 @@ export function AnonymousWall() {
   }, []);
 
   const handleReply = useCallback(
-    async (noteId: number, text: string, from: string, avatarId: string | null) => {
+    async (
+      noteId: number,
+      text: string,
+      from: string,
+      avatarId: string | null,
+    ) => {
       const res = await fetch(`${API}/api/wall/notes/${noteId}/replies`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, from, avatarId }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg =
+          (err as { error?: string }).error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่";
+        toast.error(msg);
+        throw new Error(msg);
+      }
       const created = await res.json();
       setNotes((prev) =>
         prev.map((n) =>
-          n.id === noteId ? { ...n, replies: [...n.replies, created] } : n
-        )
+          n.id === noteId ? { ...n, replies: [...n.replies, created] } : n,
+        ),
       );
       return created;
     },
-    []
+    [],
   );
 
   // Shared submit panel content (used both desktop inline and mobile sheet)
@@ -463,10 +827,16 @@ export function AnonymousWall() {
         onClick={() => setShowAvatarPicker(true)}
         title="เลือกอวตาร"
         className={`rounded-full w-11 h-11 shrink-0 cursor-pointer flex items-center justify-center overflow-hidden mt-0.5 ${
-          avatar ? "border-2 border-us-orange bg-us-surface" : "border-2 border-dashed border-us-muted bg-us-surface"
+          avatar
+            ? "border-2 border-us-orange bg-us-surface"
+            : "border-2 border-dashed border-us-muted bg-us-surface"
         }`}
       >
-        {avatar ? <AvatarFace preset={avatar} size={44} /> : <Smile size={18} className="text-us-muted" strokeWidth={1.5} />}
+        {avatar ? (
+          <AvatarFace preset={avatar} size={44} />
+        ) : (
+          <Smile size={18} className="text-us-muted" strokeWidth={1.5} />
+        )}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -479,24 +849,37 @@ export function AnonymousWall() {
           maxLength={30}
           className="w-full bg-us-surface border border-us-muted rounded px-3 py-1.5 text-[12px] outline-none text-us-text font-sans mb-2 focus:border-us-blue transition-colors"
         />
+        {/* Rotating family prompt */}
+        <p className="text-[11px] text-us-orange/80 mb-1.5 leading-snug italic">
+          ✨ {FAMILY_PROMPTS[promptIndex]}
+        </p>
         <textarea
           autoFocus
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
           }}
           placeholder="เขียนสิ่งที่อยากให้ครอบครัวรู้..."
           rows={2}
           className="w-full bg-white border-2 border-us-dark rounded px-3 py-2 text-[14px] resize-none outline-none text-us-text font-sans"
         />
+        <p className="text-[11px] text-us-muted/60 mt-1 leading-snug">
+          พื้นที่นี้สำหรับข้อความถึงครอบครัว — ความรัก ความห่วงใย
+          หรือสิ่งที่พูดออกมาไม่ได้
+        </p>
         <div className="flex gap-1.5 mt-2 flex-wrap">
           {TAGS.map((t) => (
             <button
               key={t}
               onClick={() => setSelectedTag(t)}
               className={`rounded-full px-2.5 py-[3px] text-[11px] cursor-pointer transition-all duration-150 ${
-                selectedTag === t ? "bg-us-blue text-white border-none" : "bg-us-surface text-us-muted border border-us-muted"
+                selectedTag === t
+                  ? "bg-us-blue text-white border-none"
+                  : "bg-us-surface text-us-muted border border-us-muted"
               }`}
             >
               {t}
@@ -517,7 +900,6 @@ export function AnonymousWall() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-us-dark overflow-hidden font-sans">
-
       {/* ── Desktop top bar (hidden on mobile) ───────────────── */}
       <div className="hidden sm:flex shrink-0 items-center gap-2 px-5 h-[52px] bg-us-dark border-b border-white/8 z-30 overflow-x-auto">
         {/* Title */}
@@ -531,13 +913,18 @@ export function AnonymousWall() {
         <div className="w-[3px] h-[18px] bg-us-orange rounded-sm shrink-0" />
 
         {/* Filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto shrink-1" style={{ scrollbarWidth: "none" }}>
+        <div
+          className="flex gap-1.5 overflow-x-auto shrink-1"
+          style={{ scrollbarWidth: "none" }}
+        >
           {FILTERS.map((f) => (
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`rounded-full px-3 py-1 text-[11px] whitespace-nowrap shrink-0 cursor-pointer transition-all duration-150 ${
-                activeFilter === f ? "bg-us-orange text-white border-none" : "bg-white/8 text-us-cream/60 border border-white/12"
+                activeFilter === f
+                  ? "bg-us-orange text-white border-none"
+                  : "bg-white/8 text-us-cream/60 border border-white/12"
               }`}
             >
               {f}
@@ -556,10 +943,16 @@ export function AnonymousWall() {
           onClick={() => setShowAvatarPicker(true)}
           title="เลือกอวตาร"
           className={`rounded-full w-[34px] h-[34px] flex items-center justify-center shrink-0 overflow-hidden cursor-pointer transition-colors ${
-            avatar ? "border-2 border-us-orange bg-white/8" : "border border-white/15 bg-white/8"
+            avatar
+              ? "border-2 border-us-orange bg-white/8"
+              : "border border-white/15 bg-white/8"
           }`}
         >
-          {avatar ? <AvatarFace preset={avatar} size={34} /> : <Smile size={15} className="text-us-cream/50" strokeWidth={1.5} />}
+          {avatar ? (
+            <AvatarFace preset={avatar} size={34} />
+          ) : (
+            <Smile size={15} className="text-us-cream/50" strokeWidth={1.5} />
+          )}
         </button>
 
         {submitted ? (
@@ -569,15 +962,35 @@ export function AnonymousWall() {
         ) : (
           <div className="flex gap-1.5 shrink-0">
             <button
-              onClick={() => { setShowSubmit((s) => !s); setShowDrawing(false); }}
+              onClick={() => {
+                setShowSubmit((s) => {
+                  if (!s)
+                    setPromptIndex((i) => (i + 1) % FAMILY_PROMPTS.length);
+                  return !s;
+                });
+                setShowDrawing(false);
+              }}
               className={`rounded-full px-[10px] py-[6px] text-[12px] font-bold cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1 ${
-                showSubmit ? "bg-white/12 text-white" : "bg-us-orange text-white hover:bg-orange-500"
+                showSubmit
+                  ? "bg-white/12 text-white"
+                  : "bg-us-orange text-white hover:bg-orange-500"
               }`}
             >
-              {showSubmit ? <><X size={12} strokeWidth={2.5} /> ปิด</> : <><Keyboard size={12} strokeWidth={2} /> พิมพ์</>}
+              {showSubmit ? (
+                <>
+                  <X size={12} strokeWidth={2.5} /> ปิด
+                </>
+              ) : (
+                <>
+                  <Keyboard size={12} strokeWidth={2} /> พิมพ์
+                </>
+              )}
             </button>
             <button
-              onClick={() => { setShowDrawing(true); setShowSubmit(false); }}
+              onClick={() => {
+                setShowDrawing(true);
+                setShowSubmit(false);
+              }}
               className="bg-white/10 text-us-cream border border-white/20 rounded-full px-[10px] py-[6px] text-[12px] font-bold cursor-pointer whitespace-nowrap flex items-center gap-1 hover:bg-white/20 transition-colors"
             >
               <Pen size={12} strokeWidth={2} /> เขียน
@@ -637,10 +1050,22 @@ export function AnonymousWall() {
                 <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-white/20" />
                 {/* lines */}
                 <div className="px-3 pt-5 flex flex-col gap-2">
-                  <div className="us-skeleton h-2 w-12 rounded" style={{ animationDelay: `${i * 0.1 + 0.1}s` }} />
-                  <div className="us-skeleton h-2.5 w-full rounded" style={{ animationDelay: `${i * 0.1 + 0.2}s` }} />
-                  <div className="us-skeleton h-2.5 w-4/5 rounded" style={{ animationDelay: `${i * 0.1 + 0.3}s` }} />
-                  <div className="us-skeleton h-2.5 w-3/5 rounded" style={{ animationDelay: `${i * 0.1 + 0.4}s` }} />
+                  <div
+                    className="us-skeleton h-2 w-12 rounded"
+                    style={{ animationDelay: `${i * 0.1 + 0.1}s` }}
+                  />
+                  <div
+                    className="us-skeleton h-2.5 w-full rounded"
+                    style={{ animationDelay: `${i * 0.1 + 0.2}s` }}
+                  />
+                  <div
+                    className="us-skeleton h-2.5 w-4/5 rounded"
+                    style={{ animationDelay: `${i * 0.1 + 0.3}s` }}
+                  />
+                  <div
+                    className="us-skeleton h-2.5 w-3/5 rounded"
+                    style={{ animationDelay: `${i * 0.1 + 0.4}s` }}
+                  />
                 </div>
               </div>
             ))}
@@ -663,7 +1088,12 @@ export function AnonymousWall() {
               height={28 * scale}
               patternUnits="userSpaceOnUse"
             >
-              <circle cx={2 * scale} cy={2 * scale} r={1.2 * scale} fill="#6b6055" />
+              <circle
+                cx={2 * scale}
+                cy={2 * scale}
+                r={1.2 * scale}
+                fill="#6b6055"
+              />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#us-dots)" />
@@ -672,7 +1102,9 @@ export function AnonymousWall() {
         {/* Panned + scaled layer — transform is dynamic JS so inline style is required */}
         <div
           className="absolute top-0 left-0 will-change-transform origin-top-left"
-          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+          }}
         >
           {/* Dashed string threads */}
           <svg className="absolute top-0 left-0 w-full h-full overflow-visible opacity-20 pointer-events-none">
@@ -725,7 +1157,9 @@ export function AnonymousWall() {
         <div className="sm:hidden absolute right-3 top-4 z-20 flex flex-col gap-2">
           {/* Note count badge */}
           <div className="flex flex-col items-center bg-us-dark/85 border border-white/10 rounded-2xl px-2 py-2.5 gap-[2px] backdrop-blur-sm">
-            <span className="text-[15px] font-bold text-us-orange leading-none">{notes.length}</span>
+            <span className="text-[15px] font-bold text-us-orange leading-none">
+              {notes.length}
+            </span>
             <span className="text-[8px] text-us-cream/40">โน้ต</span>
           </div>
 
@@ -734,7 +1168,10 @@ export function AnonymousWall() {
 
           {/* Filter */}
           <button
-            onClick={() => { setShowMobileFilter((s) => !s); setShowMobileSubmit(false); }}
+            onClick={() => {
+              setShowMobileFilter((s) => !s);
+              setShowMobileSubmit(false);
+            }}
             title="กรอง"
             className={`w-10 h-10 rounded-2xl flex flex-col items-center justify-center gap-[3px] cursor-pointer transition-colors border ${
               showMobileFilter || activeFilter !== "ทั้งหมด"
@@ -744,13 +1181,22 @@ export function AnonymousWall() {
           >
             <SlidersHorizontal size={15} strokeWidth={2} />
             {activeFilter !== "ทั้งหมด" && (
-              <span className="text-[7px] font-bold leading-none truncate max-w-[32px] text-center">{activeFilter}</span>
+              <span className="text-[7px] font-bold leading-none truncate max-w-[32px] text-center">
+                {activeFilter}
+              </span>
             )}
           </button>
 
           {/* Type note */}
           <button
-            onClick={() => { setShowMobileSubmit((s) => !s); setShowMobileFilter(false); setShowDrawing(false); }}
+            onClick={() => {
+              setShowMobileSubmit((s) => {
+                if (!s) setPromptIndex((i) => (i + 1) % FAMILY_PROMPTS.length);
+                return !s;
+              });
+              setShowMobileFilter(false);
+              setShowDrawing(false);
+            }}
             title="พิมพ์โน้ต"
             className={`w-10 h-10 rounded-2xl flex items-center justify-center cursor-pointer transition-colors border ${
               showMobileSubmit
@@ -763,7 +1209,11 @@ export function AnonymousWall() {
 
           {/* Draw note */}
           <button
-            onClick={() => { setShowDrawing(true); setShowMobileSubmit(false); setShowMobileFilter(false); }}
+            onClick={() => {
+              setShowDrawing(true);
+              setShowMobileSubmit(false);
+              setShowMobileFilter(false);
+            }}
             title="เขียนด้วยมือ"
             className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
           >
@@ -775,16 +1225,28 @@ export function AnonymousWall() {
             onClick={() => setShowAvatarPicker(true)}
             title="เลือกอวตาร"
             className={`w-10 h-10 rounded-2xl flex items-center justify-center cursor-pointer transition-colors border overflow-hidden ${
-              avatar ? "border-us-orange bg-us-dark/85" : "border-white/10 bg-us-dark/85 backdrop-blur-sm"
+              avatar
+                ? "border-us-orange bg-us-dark/85"
+                : "border-white/10 bg-us-dark/85 backdrop-blur-sm"
             }`}
           >
-            {avatar ? <AvatarFace preset={avatar} size={40} /> : <Smile size={15} className="text-us-cream/60" strokeWidth={1.5} />}
+            {avatar ? (
+              <AvatarFace preset={avatar} size={40} />
+            ) : (
+              <Smile size={15} className="text-us-cream/60" strokeWidth={1.5} />
+            )}
           </button>
 
           {/* Zoom in */}
           <div className="w-full h-px bg-white/8" />
           <button
-            onClick={() => applyZoom(scale * 1.3, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            onClick={() =>
+              applyZoom(
+                scale * 1.3,
+                (canvasRef.current?.clientWidth ?? 400) / 2,
+                (canvasRef.current?.clientHeight ?? 600) / 2,
+              )
+            }
             className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
             title="ซูมเข้า"
           >
@@ -792,7 +1254,13 @@ export function AnonymousWall() {
           </button>
           {/* Zoom out */}
           <button
-            onClick={() => applyZoom(scale * 0.75, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            onClick={() =>
+              applyZoom(
+                scale * 0.75,
+                (canvasRef.current?.clientWidth ?? 400) / 2,
+                (canvasRef.current?.clientHeight ?? 600) / 2,
+              )
+            }
             className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/60 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
             title="ซูมออก"
           >
@@ -800,7 +1268,13 @@ export function AnonymousWall() {
           </button>
           {/* Zoom reset */}
           <button
-            onClick={() => applyZoom(1, (canvasRef.current?.clientWidth ?? 400) / 2, (canvasRef.current?.clientHeight ?? 600) / 2)}
+            onClick={() =>
+              applyZoom(
+                1,
+                (canvasRef.current?.clientWidth ?? 400) / 2,
+                (canvasRef.current?.clientHeight ?? 600) / 2,
+              )
+            }
             className="w-10 h-10 rounded-2xl bg-us-dark/85 border border-white/10 text-us-cream/50 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm text-[9px] font-bold"
             title="รีเซ็ต"
           >
@@ -811,14 +1285,21 @@ export function AnonymousWall() {
         {/* ── Mobile filter bottom sheet ── */}
         {showMobileFilter && (
           <div className="sm:hidden absolute bottom-0 left-0 right-0 z-30 bg-us-dark/95 border-t border-white/10 px-4 py-4 backdrop-blur-md">
-            <div className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-cream/40 uppercase tracking-[1.5px] mb-3">กรองตามหมวด</div>
+            <div className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-cream/40 uppercase tracking-[1.5px] mb-3">
+              กรองตามหมวด
+            </div>
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((f) => (
                 <button
                   key={f}
-                  onClick={() => { setActiveFilter(f); setShowMobileFilter(false); }}
+                  onClick={() => {
+                    setActiveFilter(f);
+                    setShowMobileFilter(false);
+                  }}
                   className={`rounded-full px-4 py-1.5 text-[12px] cursor-pointer transition-all ${
-                    activeFilter === f ? "bg-us-orange text-white" : "bg-white/8 text-us-cream/60 border border-white/12"
+                    activeFilter === f
+                      ? "bg-us-orange text-white"
+                      : "bg-white/8 text-us-cream/60 border border-white/12"
                   }`}
                 >
                   {f}
@@ -832,8 +1313,13 @@ export function AnonymousWall() {
         {showMobileSubmit && (
           <div className="sm:hidden absolute bottom-0 left-0 right-0 z-30 bg-us-bg border-t-2 border-us-dark/60 px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-muted uppercase tracking-[1.5px]">ส่งโน้ต</span>
-              <button onClick={() => setShowMobileSubmit(false)} className="text-us-muted bg-transparent border-none cursor-pointer p-1">
+              <span className="font-[family-name:var(--font-patrick-hand)] text-[10px] text-us-muted uppercase tracking-[1.5px]">
+                ส่งโน้ต
+              </span>
+              <button
+                onClick={() => setShowMobileSubmit(false)}
+                className="text-us-muted bg-transparent border-none cursor-pointer p-1"
+              >
                 <X size={16} strokeWidth={2} />
               </button>
             </div>
@@ -841,28 +1327,48 @@ export function AnonymousWall() {
               <div className="flex items-center justify-center gap-2 py-4 text-us-muted text-[14px] font-bold">
                 <Check size={16} strokeWidth={2.5} /> ส่งโน้ตแล้ว!
               </div>
-            ) : submitPanel}
+            ) : (
+              submitPanel
+            )}
           </div>
         )}
 
         {/* ── Desktop zoom controls ── */}
         <div className="hidden sm:flex absolute bottom-4 right-4 flex-col gap-1 z-20">
           <button
-            onClick={() => applyZoom(scale * 1.25, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            onClick={() =>
+              applyZoom(
+                scale * 1.25,
+                (canvasRef.current?.clientWidth ?? 800) / 2,
+                (canvasRef.current?.clientHeight ?? 500) / 2,
+              )
+            }
             className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/70 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10"
             title="ซูมเข้า"
           >
             <ZoomIn size={14} strokeWidth={2} />
           </button>
           <button
-            onClick={() => applyZoom(scale * 0.8, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            onClick={() =>
+              applyZoom(
+                scale * 0.8,
+                (canvasRef.current?.clientWidth ?? 800) / 2,
+                (canvasRef.current?.clientHeight ?? 500) / 2,
+              )
+            }
             className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/70 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10"
             title="ซูมออก"
           >
             <ZoomOut size={14} strokeWidth={2} />
           </button>
           <button
-            onClick={() => applyZoom(1, (canvasRef.current?.clientWidth ?? 800) / 2, (canvasRef.current?.clientHeight ?? 500) / 2)}
+            onClick={() =>
+              applyZoom(
+                1,
+                (canvasRef.current?.clientWidth ?? 800) / 2,
+                (canvasRef.current?.clientHeight ?? 500) / 2,
+              )
+            }
             className="w-8 h-8 bg-us-dark/80 hover:bg-us-dark text-us-cream/60 hover:text-us-cream rounded-md flex items-center justify-center cursor-pointer transition-colors border border-white/10 font-bold text-[10px]"
             title="รีเซ็ตซูม"
           >
@@ -884,6 +1390,44 @@ export function AnonymousWall() {
           displayName={displayName}
           onNameChange={saveName}
         />
+      )}
+
+      {/* ── Off-topic confirmation modal ──────────────────────── */}
+      {showOffTopicConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-5">
+          <div className="bg-us-bg rounded-xl shadow-2xl max-w-sm w-full p-6 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[15px] font-bold text-us-text leading-snug">
+                ข้อความนี้ดูไม่เกี่ยวกับครอบครัว
+              </p>
+              <p className="text-[13px] text-us-muted leading-relaxed">
+                พื้นที่นี้ตั้งใจให้เป็นที่แชร์ความรู้สึกต่อครอบครัว
+                ลองเขียนใหม่ดูไหม?
+              </p>
+            </div>
+            {/* Preview the current text */}
+            <p className="text-[12px] text-us-muted/70 bg-us-surface rounded px-3 py-2 italic line-clamp-3">
+              "{inputText}"
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowOffTopicConfirm(false)}
+                className="px-4 py-2 rounded text-[13px] font-bold bg-us-orange text-white cursor-pointer hover:bg-orange-500 transition-colors"
+              >
+                แก้ไขข้อความ
+              </button>
+              <button
+                onClick={() => {
+                  setShowOffTopicConfirm(false);
+                  doSubmit();
+                }}
+                className="px-4 py-2 rounded text-[13px] text-us-muted bg-us-surface cursor-pointer hover:bg-white/10 transition-colors"
+              >
+                ส่งต่อไป
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showAvatarPicker && (
